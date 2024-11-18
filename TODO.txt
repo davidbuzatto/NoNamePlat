@@ -1,0 +1,4 @@
+Preparar animações;
+Terminar ações do jogador (correr, pulo duplo);
+Mudar o sistema de colisão para quadtree;
+Implementar terreno inclinado.
