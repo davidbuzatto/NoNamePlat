@@ -7,7 +7,7 @@ import br.com.davidbuzatto.nonameplat.GameWorld;
 import java.awt.Color;
 
 /**
- * On tile for the world.
+ * One tile for the world.
  * 
  * @author Prof. Dr. David Buzatto
  */

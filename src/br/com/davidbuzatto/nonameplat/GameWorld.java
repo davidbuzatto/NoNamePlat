@@ -89,10 +89,10 @@ public class GameWorld extends EngineFrame {
     @Override
     public void draw() {
         
-        clearBackground( WHITE );
+        clearBackground( SKYBLUE );
         beginMode2D( camera );
         
-        drawTestBackground();
+        //drawTestBackground();
         drawTiles();
         
         hero.draw( this );

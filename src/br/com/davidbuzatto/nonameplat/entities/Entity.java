@@ -7,6 +7,38 @@ package br.com.davidbuzatto.nonameplat.entities;
  */
 public abstract class Entity {
     
+    public static enum State {
+        
+        IDLE,
+        MOVING,
+        ON_GROUND,
+
+        JUMPING,
+        FALLING,
+
+        WALKING,
+        RUNNING,
+
+        ALIVE,
+        DYING,
+        DEAD,
+
+        ACTIVE,
+        INACTIVE,
+
+        ATTACKING,
+        BEING_ATTACKED,
+
+        CLIMBING,
+        PUSHING,
+
+        LOOKING_LEFT,
+        LOOKING_RIGHT,
+        LOOKING_UP,
+        LOOKING_DOWN;
+        
+    }
+    
     private static int idCounter;
     protected int id;
     
