@@ -1,4 +1,5 @@
-Preparar animações;
-Terminar ações do jogador (correr, pulo duplo);
+Acelerar ao invés de sair correndo;
 Mudar o sistema de colisão para quadtree;
-Implementar terreno inclinado.
+Implementar terreno inclinado;
+Cenários com múltiplas camadas;
+Fundo com parallax;

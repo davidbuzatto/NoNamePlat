@@ -2,11 +2,16 @@ package br.com.davidbuzatto.nonameplat;
 
 import br.com.davidbuzatto.jsge.core.Camera2D;
 import br.com.davidbuzatto.jsge.core.engine.EngineFrame;
+import br.com.davidbuzatto.jsge.core.utils.ColorUtils;
+import br.com.davidbuzatto.jsge.image.Image;
+import br.com.davidbuzatto.jsge.image.ImageUtils;
 import br.com.davidbuzatto.jsge.math.Vector2;
 import br.com.davidbuzatto.nonameplat.entities.characters.Hero;
 import br.com.davidbuzatto.nonameplat.entities.tiles.Tile;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Game World.
@@ -28,6 +33,7 @@ public class GameWorld extends EngineFrame {
     private Hero hero;
     private Camera2D camera;
     
+    private Map<Character, Image> tileSkins;
     private List<Tile> tiles;
     
     public GameWorld() {
@@ -39,14 +45,13 @@ public class GameWorld extends EngineFrame {
     @Override
     public void create() {
         
+        setDefaultFontSize( 20 );
+        
         halfScreenWidth = getScreenWidth() / 2;
         halfScreenHeight = getScreenHeight() / 2;
         
         hero = new Hero( 
-            new Vector2( 
-                halfScreenWidth, 
-                halfScreenHeight
-            ),
+            new Vector2(),
             BLUE
         );
         
@@ -57,20 +62,23 @@ public class GameWorld extends EngineFrame {
             1.0
         );
         
+        loadTileSkins();
+        
         processMapData( 
             """
-            b                       b
-            b                       b
-            b                       b
-            b                       b
-            b                       b
-            b                       b
-            b           bbbbbbb     b
-            b          b            b
-            b         b             b
-            b   p    b              b
-            b                       b
-            bbbbbbbbbbbbbbbbbbbbbbbbb
+            G                       E
+            G                       E
+            G                       E
+            G                       E
+            G                       E
+            G                       E
+            G           IJJJJJK     E
+            G          L            E
+            G         L             E
+            G        L              E
+            G    p                  E
+            MBBBBBBBBBBBBBBBBBBBBBBBN
+            FFFFFFFFFFFFFFFFFFFFFFFFF
             """
         );
         
@@ -79,8 +87,7 @@ public class GameWorld extends EngineFrame {
     @Override
     public void update( double delta ) {
         
-        hero.update( this, width, height, delta );
-        hero.resolveCollisionTiles( tiles );
+        hero.update( this, width, height, tiles, delta );
         
         updateCamera();
         
@@ -98,7 +105,8 @@ public class GameWorld extends EngineFrame {
         hero.draw( this );
         
         endMode2D();
-        drawFPS( 20, 20 );
+        
+        drawStatistics( 20, 20 );
     
     }
     
@@ -137,6 +145,17 @@ public class GameWorld extends EngineFrame {
         }
     }
     
+    private void drawStatistics( int x, int y ) {
+        
+        fillRectangle( x - 10, y - 10, 440, 120, ColorUtils.fade( WHITE, 0.5 ) );
+        drawFPS( x, y );
+        drawText( "    pos: " + hero.getPos().toString(), x, y += 20, BLACK );
+        drawText( "prevPos: " + hero.getPos().toString(), x, y += 20, BLACK );
+        drawText( "    vel: " + hero.getVel().toString(), x, y += 20, BLACK );
+        drawText( "r jumps: " + hero.getRemainingJumps(), x, y += 20, BLACK );
+        
+    }
+    
     private void updateCamera() {
         
         if ( hero.getPos().x <= halfScreenWidth ) {
@@ -157,6 +176,17 @@ public class GameWorld extends EngineFrame {
         
     }
     
+    private void loadTileSkins() {
+        
+        String tilePath = "resources/images/tiles/tile%c.png";
+        
+        tileSkins = new HashMap<>();
+        for ( char c = 'A'; c <= 'N'; c++ ) {
+            tileSkins.put( c, ImageUtils.loadImage( String.format( tilePath, c ) ) );
+        }
+        
+    }
+    
     private void processMapData( String mapData ) {
         
         int currentLine = 0;
@@ -170,19 +200,38 @@ public class GameWorld extends EngineFrame {
                 currentLine++;
                 currentColumn = 0;
             } else {
-                switch ( c ) {
-                    case 'p':
-                        hero.getPos().x = currentColumn * BASE_WIDTH;
-                        hero.getPos().y = currentLine * BASE_WIDTH;
-                        break;
-                    case 'b':
-                        tiles.add( new Tile( new Vector2( currentColumn * BASE_WIDTH, currentLine * BASE_WIDTH ), ORANGE ) );
-                        break;
+                
+                if ( c >= 'A' && c <= 'N' ) {
+                    tiles.add( 
+                        new Tile( 
+                            new Vector2( currentColumn * BASE_WIDTH, currentLine * BASE_WIDTH ), 
+                            ORANGE,
+                            tileSkins.get( c )
+                        )
+                    );
+                } else {
+                    
+                    switch ( c ) {
+                        case 'p':
+                            hero.getPos().x = currentColumn * BASE_WIDTH;
+                            hero.getPos().y = currentLine * BASE_WIDTH;
+                            hero.updateCollisionProbes();
+                            break;
+                        default:
+                            if ( c != ' ' ) {
+                                tiles.add( new Tile( new Vector2( currentColumn * BASE_WIDTH, currentLine * BASE_WIDTH ) ) );
+                            }
+                            break;
+                    }
+                    
                 }
+                
                 currentColumn++;
+                
                 if ( maxColumn < currentColumn ) {
                     maxColumn = currentColumn;
                 }
+                
             }
         }
         

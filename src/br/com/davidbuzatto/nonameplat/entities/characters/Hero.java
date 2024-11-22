@@ -41,13 +41,6 @@ public class Hero extends Entity {
     
     private int remainingJumps;
     private Vector2 doubleJumpPos;
-    private boolean runDoubleJumpAnimation;
-    
-    private State xState;
-    private State velXState;
-    private State velYState;
-    private State lookingState;
-    private State healthState;
     
     private Image idleImageMap;
     private Image walkImageMap;
@@ -81,6 +74,14 @@ public class Hero extends Entity {
     private double cpUpAdjust;
     private double cpDownAdjust;
     
+    // state management
+    private State lookingState;
+    private State xState;
+    private State yState;
+    
+    private boolean running;
+    private boolean pushing;
+    
     public Hero( Vector2 pos, Color color ) {
         
         this.pos = pos;
@@ -96,12 +97,6 @@ public class Hero extends Entity {
         this.remainingJumps = 2;
         this.doubleJumpPos = new Vector2();
         
-        this.lookingState = State.LOOKING_RIGHT;
-        this.xState = State.IDLE;
-        this.velXState = State.IDLE;
-        this.velYState = State.ON_GROUND;
-        this.healthState = State.ALIVE;
-        
         this.cpLeft = new Rectangle( 0, 0, CP_WIDTH_SML, CP_WIDTH_BIG );
         this.cpRight = new Rectangle( 0, 0, CP_WIDTH_SML, CP_WIDTH_BIG );
         this.cpUp = new Rectangle( 0, 0, CP_WIDTH_BIG, CP_WIDTH_SML );
@@ -111,11 +106,17 @@ public class Hero extends Entity {
         this.cpUpAdjust = 10;
         this.cpDownAdjust = 10;
         
+        this.lookingState = State.LOOKING_RIGHT;
+        this.xState = State.IDLE;
+        this.yState = State.ON_GROUND;
+        this.running = false;
+        this.pushing = false;
+        
         loadImagesAndCreateAnimations();
         
     }
     
-    public void update( EngineFrame e, double worldWidth, double worldHeight, double delta ) {
+    public void update( EngineFrame e, double worldWidth, double worldHeight, List<Tile> tiles, double delta ) {
         
         pos.x += vel.x * delta;
         pos.y += vel.y * delta;
@@ -123,55 +124,55 @@ public class Hero extends Entity {
         double currentSpeed;
         if ( e.isKeyDown( EngineFrame.KEY_CONTROL ) ) {
             currentSpeed = runSpeed;
-            velXState = State.RUNNING;
+            running = true;
         } else {
             currentSpeed = walkSpeed;
-            velXState = State.WALKING;
+            running = false;
         }
+        
+        pushing = false;
         
         if ( e.isKeyDown( EngineFrame.KEY_LEFT ) ) {
             vel.x = -currentSpeed;
+            lookingState = State.LOOKING_LEFT;
             xState = State.MOVING;
         } else if ( e.isKeyDown( EngineFrame.KEY_RIGHT ) ) {
             vel.x = currentSpeed;
+            lookingState = State.LOOKING_RIGHT;
             xState = State.MOVING;
         } else {
             vel.x = 0;
             xState = State.IDLE;
         }
         
+        resolveCollisionTiles( tiles );
+        
         if ( e.isKeyPressed( EngineFrame.KEY_SPACE ) && remainingJumps > 0 ) {
             vel.y = jumpSpeed;
+            remainingJumps--;
             jumpAnimationRight.reset();
             jumpAnimationLeft.reset();
-            remainingJumps--;
             if ( remainingJumps == 0 ) {
                 doubleJumpPos.x = pos.x;
                 doubleJumpPos.y = pos.y;
-                runDoubleJumpAnimation = true;
                 doubleJumpDustAnimation.reset();
             }
-            
+        }
+        
+        if ( vel.y < 0 ) {
+            yState = State.JUMPING;
+            pushing = false;
+        } else if ( vel.y > 0 ) {
+            yState = State.FALLING;
+            pushing = false;
+        } else {
+            yState = State.ON_GROUND;
         }
         
         vel.y += GameWorld.GRAVITY;
         
         if ( vel.y > maxFallSpeed ) {
             vel.y = maxFallSpeed;
-        }
-        
-        if ( vel.x < 0 ) {
-            lookingState = State.LOOKING_LEFT;
-        } else if ( vel.x > 0 ) {
-            lookingState = State.LOOKING_RIGHT;
-        } else {
-            velXState = State.IDLE;
-        }
-        
-        if ( vel.y < 0 ) {
-            velYState = State.JUMPING;
-        } else if ( vel.y > 0 ) {
-            velYState = State.FALLING;
         }
         
         idleAnimationRight.update( delta );
@@ -184,15 +185,12 @@ public class Hero extends Entity {
         dustAnimationLeft.update( delta );
         pushAnimationRight.update( delta );
         pushAnimationLeft.update( delta );
-            
-        if ( velYState == State.JUMPING || velYState == State.FALLING ) {
+        
+        if ( yState != State.ON_GROUND ) {
             jumpAnimationRight.update( delta );
             jumpAnimationLeft.update( delta );
-            if ( runDoubleJumpAnimation ) {
+            if ( remainingJumps == 0 ) {
                 doubleJumpDustAnimation.update( delta );
-                if ( doubleJumpDustAnimation.getState() == AnimationExecutionState.FINISHED ) {
-                    runDoubleJumpAnimation = false;
-                }
             }
         }
         
@@ -204,70 +202,68 @@ public class Hero extends Entity {
     
     public void draw( EngineFrame e ) {
         
-        //e.drawText( String.valueOf( remainingJumps ), pos.x, pos.y - 20, 20, EngineFrame.BLACK );
         //e.fillRectangle( pos, dim, color );
         //e.drawRectangle( pos, dim, EngineFrame.BLACK );
         
-        /*e.fillRectangle( cpLeft, lookingState == State.LOOKING_LEFT ? EngineFrame.GREEN : EngineFrame.RED );
-        e.fillRectangle( cpRight, lookingState == State.LOOKING_RIGHT ? EngineFrame.GREEN : EngineFrame.RED );
-        e.fillRectangle( cpUp, yState == State.JUMPING ? EngineFrame.GREEN : EngineFrame.RED );
-        e.fillRectangle( cpDown, yState == State.FALLING ? EngineFrame.GREEN : EngineFrame.RED );*/
-        
-        if ( runDoubleJumpAnimation ) {
+        if ( remainingJumps == 0 && doubleJumpDustAnimation.getState() != AnimationExecutionState.FINISHED ) {
             doubleJumpDustAnimation.getCurrentFrame().draw( e, doubleJumpPos.x, doubleJumpPos.y );
         }
         
         if ( lookingState == State.LOOKING_RIGHT ) {
-            if ( velYState == State.JUMPING || velYState == State.FALLING ) {
-                jumpAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
-            } else {
-                switch ( xState ) {
-                    case IDLE:
-                        idleAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
-                        break;
-                    case MOVING:
-                        switch ( velXState ) {
-                            case WALKING:
-                                walkAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
-                                break;
-                            case RUNNING:
-                                dustAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
-                                runAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
-                                break;
-                        }   break;
-                    case PUSHING:
+            if ( yState == State.ON_GROUND ) {
+                if ( xState == State.MOVING ) {
+                    if ( pushing ) {
                         pushAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
-                        break;
+                    } else if ( running ) {
+                        dustAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                        runAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                    } else {
+                        walkAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                    }
+                } else {
+                    idleAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
                 }
+            } else {
+                jumpAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
             }
         } else {
-            if ( velYState == State.JUMPING || velYState == State.FALLING ) {
-                jumpAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
-            } else {
-                switch ( xState ) {
-                    case IDLE:
-                        idleAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
-                        break;
-                    case MOVING:
-                        switch ( velXState ) {
-                            case WALKING:
-                                walkAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
-                                break;
-                            case RUNNING:
-                                dustAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
-                                runAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
-                                break;
-                        }   break;
-                    case PUSHING:
+            if ( yState == State.ON_GROUND ) {
+                if ( xState == State.MOVING ) {
+                    if ( pushing ) {
                         pushAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
-                        break;
+                    } else if ( running ) {
+                        dustAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                        runAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                    } else {
+                        walkAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                    }
+                } else {
+                    idleAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
                 }
+            } else {
+                jumpAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
             }
+        }
+        
+        //drawCollisionProbes( e );
+        
+    }
+    
+    private void drawCollisionProbes( EngineFrame e ) {
+        
+        e.fillRectangle( cpLeft, lookingState == State.LOOKING_LEFT ? EngineFrame.GREEN : EngineFrame.RED );
+        e.fillRectangle( cpRight, lookingState == State.LOOKING_RIGHT ? EngineFrame.GREEN : EngineFrame.RED );
+        e.fillRectangle( cpUp, yState == State.JUMPING ? EngineFrame.GREEN : EngineFrame.RED );
+        if ( yState == State.ON_GROUND ) {
+            e.fillRectangle( cpDown, EngineFrame.BLUE );
+        } else {
+            e.fillRectangle( cpDown, yState == State.FALLING ? EngineFrame.GREEN : EngineFrame.RED );
         }
         
     }
     
     public void updateCollisionProbes() {
+        
         cpLeft.x = pos.x + cpLeftAdjust;
         cpLeft.y = pos.y + dim.y / 2 - cpLeft.height / 2;
         cpRight.x = pos.x + dim.x - cpRight.width + cpRightAdjust;
@@ -276,6 +272,7 @@ public class Hero extends Entity {
         cpUp.y = pos.y;
         cpDown.x = pos.x + dim.x / 2 - cpDown.width / 2;
         cpDown.y = pos.y + dim.y - cpDown.height;
+        
     }
     
     public CollisionType checkCollisionTile( Tile tile ) {
@@ -307,16 +304,16 @@ public class Hero extends Entity {
             switch ( c ) {
                 case DOWN:
                     pos.y = tile.getPos().y - dim.y;
-                    velYState = State.ON_GROUND;
-                    remainingJumps = 1;
+                    vel.y = 0;
+                    remainingJumps = 2;
                     break;
                 case LEFT:
                     pos.x = tile.getPos().x + tile.getDim().x - cpLeftAdjust;
-                    xState = State.PUSHING;
+                    pushing = true;
                     break;
                 case RIGHT:
                     pos.x = tile.getPos().x - dim.x - cpRightAdjust;
-                    xState = State.PUSHING;
+                    pushing = true;
                     break;
                 case UP:
                     vel.y = 0;
@@ -324,7 +321,7 @@ public class Hero extends Entity {
                     break;
             }
             updateCollisionProbes();
-        }        
+        }
         
     }
     
@@ -445,6 +442,18 @@ public class Hero extends Entity {
 
     public Vector2 getDim() {
         return dim;
+    }
+
+    public Vector2 getPrevPos() {
+        return prevPos;
+    }
+
+    public Vector2 getVel() {
+        return vel;
+    }
+
+    public int getRemainingJumps() {
+        return remainingJumps;
     }
     
 }
