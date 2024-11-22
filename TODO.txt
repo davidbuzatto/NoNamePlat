@@ -1,5 +1,7 @@
 Fundo com parallax;
 Acelerar ao invés de sair correndo;
-Cenários com múltiplas camadas;
 Mudar o sistema de colisão para quadtree;
 Implementar terreno inclinado;
+Implementar inimigos;
+Implementar itens;
+Cenários com múltiplas camadas -> implementar um editor
