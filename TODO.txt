@@ -1,5 +1,5 @@
+Fundo com parallax;
 Acelerar ao invés de sair correndo;
+Cenários com múltiplas camadas;
 Mudar o sistema de colisão para quadtree;
 Implementar terreno inclinado;
-Cenários com múltiplas camadas;
-Fundo com parallax;
