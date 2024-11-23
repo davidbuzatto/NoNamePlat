@@ -5,6 +5,9 @@ import br.com.davidbuzatto.jsge.animation.AnimationUtils;
 import br.com.davidbuzatto.jsge.animation.frame.FrameByFrameAnimation;
 import br.com.davidbuzatto.jsge.animation.frame.SpriteMapAnimationFrame;
 import br.com.davidbuzatto.jsge.collision.CollisionUtils;
+import br.com.davidbuzatto.jsge.collision.aabb.AABB;
+import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtree;
+import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtreeNode;
 import br.com.davidbuzatto.jsge.core.engine.EngineFrame;
 import br.com.davidbuzatto.jsge.geom.Rectangle;
 import br.com.davidbuzatto.jsge.image.Image;
@@ -14,6 +17,7 @@ import br.com.davidbuzatto.nonameplat.GameWorld;
 import br.com.davidbuzatto.nonameplat.entities.CollisionType;
 import br.com.davidbuzatto.nonameplat.entities.Entity;
 import br.com.davidbuzatto.nonameplat.entities.tiles.Tile;
+import br.com.davidbuzatto.nonameplat.utils.Utils;
 import java.awt.Color;
 import java.util.List;
 
@@ -89,6 +93,9 @@ public class Hero extends Entity {
     private double nextAccelerationTickCounter;
     private double nextAccelerationTickTime;
     
+    // AABB
+    private AABB aabb;
+    
     public Hero( Vector2 pos, Color color ) {
         
         this.pos = pos;
@@ -100,6 +107,8 @@ public class Hero extends Entity {
         this.maxAcceleration = 200;
         this.jumpSpeed = -450;
         this.maxFallSpeed = 600;
+        
+        this.aabb = new AABB( pos.x, pos.y, pos.x + dim.x, pos.y + dim.y, AABB.Type.DYNAMIC, this );
         
         this.remainingJumps = 2;
         this.doubleJumpPos = new Vector2();
@@ -129,7 +138,7 @@ public class Hero extends Entity {
         
     }
     
-    public void update( EngineFrame e, double worldWidth, double worldHeight, List<Tile> tiles, double delta ) {
+    public void update( EngineFrame e, double worldWidth, double worldHeight, List<Tile> tiles, AABBQuadtree quadtree, double delta ) {
         
         pos.x += vel.x * delta;
         pos.y += vel.y * delta;
@@ -188,7 +197,8 @@ public class Hero extends Entity {
             xState = State.IDLE;
         }
         
-        resolveCollisionTiles( tiles );
+        //resolveCollisionTiles( tiles );
+        resolveCollisionQuadtree( quadtree );
         
         if ( e.isKeyPressed( EngineFrame.KEY_SPACE ) && remainingJumps > 0 ) {
             vel.y = jumpSpeed;
@@ -239,6 +249,8 @@ public class Hero extends Entity {
         
         prevPos.x = pos.x;
         prevPos.y = pos.y;
+        aabb.moveTo( pos.x, pos.y );
+        
         updateCollisionProbes();
         
     }
@@ -324,19 +336,19 @@ public class Hero extends Entity {
     
     public CollisionType checkCollisionTile( Tile tile ) {
         
-        if ( CollisionUtils.checkCollisionRectangles( cpDown, tile.getBB() ) ) {
+        if ( CollisionUtils.checkCollisionRectangleAABB( cpDown, tile.getAABB() ) ) {
             return CollisionType.DOWN;
         }
         
-        if ( CollisionUtils.checkCollisionRectangles( cpLeft, tile.getBB() ) ) {
+        if ( CollisionUtils.checkCollisionRectangleAABB( cpLeft, tile.getAABB() ) ) {
             return CollisionType.LEFT;
         }
         
-        if ( CollisionUtils.checkCollisionRectangles( cpRight, tile.getBB() ) ) {
+        if ( CollisionUtils.checkCollisionRectangleAABB( cpRight, tile.getAABB() ) ) {
             return CollisionType.RIGHT;
         }
         
-        if ( CollisionUtils.checkCollisionRectangles( cpUp, tile.getBB() ) ) {
+        if ( CollisionUtils.checkCollisionRectangleAABB( cpUp, tile.getAABB() ) ) {
             return CollisionType.UP;
         }
         
@@ -344,7 +356,74 @@ public class Hero extends Entity {
         
     }
     
-    public void resolveCollisionTiles( List<Tile> tiles ) {
+    public void resolveCollisionQuadtree( AABBQuadtree quadtree ) {
+        resolveCollisionQuadnode( quadtree.getRoot(), quadtree.getMaxDepth() );
+    }
+    
+    private void resolveCollisionQuadnode( AABBQuadtreeNode node, int maxTreeDepth ) {
+        
+        if ( node.depth < maxTreeDepth ) {
+            
+            int size = node.aabbs.size();
+            for ( int i = 0; i < size; i++ ) {
+                for ( int j = i+1; j < size; j++ ) {
+                    try {
+                        AABB a = node.aabbs.get( i );
+                        AABB b = node.aabbs.get( j );
+                        //if ( a.active && b.active ) {
+                            if ( a.referencedObject instanceof Hero ) {
+                                if ( b.referencedObject instanceof Tile t ) {
+                                    resolveCollisionTile( t );
+                                } else {
+                                    break;
+                                }
+                            }
+                        //}
+                    } catch ( IndexOutOfBoundsException | NullPointerException exc ) {
+                    }
+                }
+            }
+            
+            resolveCollisionQuadnode( node.nw, maxTreeDepth );
+            resolveCollisionQuadnode( node.ne, maxTreeDepth );
+            resolveCollisionQuadnode( node.sw, maxTreeDepth );
+            resolveCollisionQuadnode( node.se, maxTreeDepth );
+            
+        }
+        
+    }
+    
+    public void resolveCollisionTile( Tile tile ) {
+        
+        CollisionType c = checkCollisionTile( tile );
+        
+        switch ( c ) {
+            case DOWN:
+                pos.y = tile.getPos().y - dim.y;
+                vel.y = 0;
+                remainingJumps = 2;
+                break;
+            case LEFT:
+                pos.x = tile.getPos().x + tile.getDim().x - cpLeftAdjust;
+                pushing = true;
+                accelerationStep = 0;
+                break;
+            case RIGHT:
+                pos.x = tile.getPos().x - dim.x - cpRightAdjust;
+                pushing = true;
+                accelerationStep = 0;
+                break;
+            case UP:
+                vel.y = 0;
+                pos.y = tile.getPos().y + tile.getDim().y;
+                break;
+        }
+        
+        updateCollisionProbes();
+        
+    }
+    
+    /*public void resolveCollisionTiles( List<Tile> tiles ) {
         
         for ( Tile tile : tiles ) {
             CollisionType c = checkCollisionTile( tile );
@@ -372,21 +451,9 @@ public class Hero extends Entity {
             updateCollisionProbes();
         }
         
-    }
+    }*/
     
     private void loadImagesAndCreateAnimations() {
-        
-        Color[] fromColor = new Color[]{
-            new Color( 244, 137, 246 ),
-            new Color( 216, 64, 251 ),
-            new Color( 120, 11, 247 )
-        };
-        
-        Color[] toColor = new Color[]{
-            new Color( 106, 156, 246 ),
-            new Color( 15, 94, 238 ),
-            new Color( 9, 56, 147 )
-        };
         
         this.idleImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/idle_4.png" );
         this.walkImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/walk_6.png" );
@@ -404,10 +471,8 @@ public class Hero extends Entity {
             this.jumpImageMap
         };
         
-        for ( int i = 0; i < fromColor.length; i++ ) {
-            for ( Image img : images ) {
-                img.colorReplace( fromColor[i], toColor[i] );
-            }
+        for ( Image image : images ) {
+            Utils.replaceHeroImageColors( image );
         }
         
         this.idleAnimationRight = new FrameByFrameAnimation<>( 
@@ -423,63 +488,63 @@ public class Hero extends Entity {
         
         this.walkAnimationRight = new FrameByFrameAnimation<>( 
             0.07,
-            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap, 6, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap, dim.x, dim.y ),
             true
         );
         this.walkAnimationLeft = new FrameByFrameAnimation<>( 
             0.07,
-            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap.copyFlipHorizontal(), 6, dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         
         this.runAnimationRight = new FrameByFrameAnimation<>( 
             0.06,
-            AnimationUtils.getSpriteMapAnimationFrameList( runImageMap, 6, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( runImageMap, dim.x, dim.y ),
             true
         );
         
         this.runAnimationLeft = new FrameByFrameAnimation<>( 
             0.06,
-            AnimationUtils.getSpriteMapAnimationFrameList( runImageMap.copyFlipHorizontal(), 6, dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( runImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         
         this.dustAnimationRight = new FrameByFrameAnimation<>( 
             0.03,
-            AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap, 6, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap, dim.x, dim.y ),
             true
         );
         this.dustAnimationLeft = new FrameByFrameAnimation<>( 
             0.03,
-            AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap.copyFlipHorizontal(), 6, dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         
         this.pushAnimationRight = new FrameByFrameAnimation<>( 
             0.07,
-            AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap, 6, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap, dim.x, dim.y ),
             true
         );
         this.pushAnimationLeft = new FrameByFrameAnimation<>( 
             0.07,
-            AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap.copyFlipHorizontal(), 6, dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         
         this.jumpAnimationRight = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap, 8, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap, dim.x, dim.y ),
             false
         );
         this.jumpAnimationLeft = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap.copyFlipHorizontal(), 8, dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             false
         );
         
         this.doubleJumpDustAnimation = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( doubleJumpDustImageMap, 5, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( doubleJumpDustImageMap, dim.x, dim.y ),
             false
         );
         this.doubleJumpDustAnimation.setStopAtLastFrameWhenFinished( false );
@@ -508,6 +573,10 @@ public class Hero extends Entity {
     
     public boolean isMoving() {
         return xState == State.MOVING;
+    }
+
+    public AABB getAABB() {
+        return aabb;
     }
     
 }

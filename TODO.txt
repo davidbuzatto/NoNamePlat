@@ -1,5 +1,5 @@
-Mudar o sistema de colisão para quadtree;
-Implementar terreno inclinado;
 Implementar inimigos;
 Implementar itens;
+Implementar controle via joystick;
+Implementar terreno inclinado;
 Cenários com múltiplas camadas -> implementar um editor

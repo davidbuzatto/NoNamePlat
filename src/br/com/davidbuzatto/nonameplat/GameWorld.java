@@ -1,18 +1,25 @@
 package br.com.davidbuzatto.nonameplat;
 
+import br.com.davidbuzatto.jsge.collision.CollisionUtils;
+import br.com.davidbuzatto.jsge.collision.aabb.AABB;
+import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtree;
+import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtreeNode;
 import br.com.davidbuzatto.jsge.core.Camera2D;
 import br.com.davidbuzatto.jsge.core.engine.EngineFrame;
 import br.com.davidbuzatto.jsge.core.utils.ColorUtils;
+import br.com.davidbuzatto.jsge.geom.Rectangle;
 import br.com.davidbuzatto.jsge.image.Image;
 import br.com.davidbuzatto.jsge.image.ImageUtils;
 import br.com.davidbuzatto.jsge.math.Vector2;
 import br.com.davidbuzatto.nonameplat.entities.characters.Hero;
 import br.com.davidbuzatto.nonameplat.entities.tiles.Tile;
+import br.com.davidbuzatto.nonameplat.utils.Utils;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Game World.
@@ -40,6 +47,21 @@ public class GameWorld extends EngineFrame {
     private Color backgroundColor;
     private ParallaxEngine parallaxEngine;
     
+    private Color aabbOverlapColor;
+    
+    private int qtWidth;
+    private int qtHeight;
+    private int maxTreeDepth;
+    
+    private List<AABB> aabbs;
+    private AABBQuadtree quadtree;
+    private List<Rectangle> overlaps;
+    
+    // statistics
+    private boolean showStatistics;
+    
+    private Image heroIcon;
+    
     public GameWorld() {
         // 896 = 14 columns
         // 512 = 8 lines
@@ -48,6 +70,10 @@ public class GameWorld extends EngineFrame {
     
     @Override
     public void create() {
+        
+        heroIcon = loadImage( "resources/images/sprites/hero/hero.png" );
+        Utils.replaceHeroImageColors( heroIcon );
+        setWindowIcon( heroIcon );
         
         setDefaultFontSize( 20 );
         
@@ -70,31 +96,52 @@ public class GameWorld extends EngineFrame {
         
         processMapData( 
             """
-            G                                                                  E
-            G                                                                  E
-            G                                                                  E
-            G                                                                  E
-            G                                                                  E
-            G                                                                  E
-            G           IJJJJJK                                                E
-            G          L                                                       E
-            G         L                                                        E
-            G        L                                                         E
-            G    p                                                             E
-            MBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBN
-            FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+            G                                            E
+            G                                            E
+            G                                            E
+            G                                            E
+            G                                            E
+            G                                            E
+            G           IJJJJJK                          E
+            G          L                                 E
+            G         L                                  E
+            G        L                                   E
+            G    p                                       E
+            MBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBN
+            FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             """
         );
         
         backgroundColor = new Color( 44, 154, 208 );
         parallaxEngine = new ParallaxEngine( worldWidth, getScreenWidth(), getScreenHeight(), 0.1 );
         
+        qtWidth = (int) worldWidth;
+        qtHeight = qtWidth;
+        maxTreeDepth = 5;
+        
+        aabbOverlapColor = ColorUtils.fade( BLUE, 0.7 );
+        
+        initAABBs();
+        quadtree = new AABBQuadtree( aabbs, qtWidth, qtHeight, maxTreeDepth );
+        overlaps = new CopyOnWriteArrayList<>();
+        
+        showStatistics = true;
+        
     }
     
     @Override
     public void update( double delta ) {
         
-        hero.update( this, worldWidth, worldHeight, tiles, delta );
+        if ( isKeyPressed( KEY_F1 ) ) {
+            showStatistics = !showStatistics;
+        }
+        
+        if ( isKeyPressed( KEY_R ) ) {
+            hero.getAABB().active = !hero.getAABB().active;
+        }
+        
+        hero.update( this, worldWidth, worldHeight, tiles, quadtree, delta );
+        quadtree.update();
         updateCamera();
         
     }
@@ -110,37 +157,10 @@ public class GameWorld extends EngineFrame {
         hero.draw( this );
         endMode2D();
         
-        drawStatistics( 20, 20 );
+        if ( showStatistics ) {
+            drawStatistics( 20, 20 );
+        }
     
-    }
-    
-    private void drawTestBackground() {
-        
-        for ( int i = 0; i < lines; i++) {
-            for ( int j = 0; j < columns; j++ ) {
-                fillRectangle( 
-                    j * BASE_WIDTH, 
-                    i * BASE_WIDTH, 
-                    BASE_WIDTH, 
-                    BASE_WIDTH, 
-                    i % 2 == 0 ?
-                        j % 2 == 0 ?
-                            GRAY : DARKGRAY
-                        :
-                        j % 2 == 0 ?
-                            DARKGRAY : GRAY
-                );
-            }
-        }
-        
-        for ( int i = 0; i <= lines; i++) {
-            drawLine( 0, i * BASE_WIDTH, worldWidth, i * BASE_WIDTH, BLACK );
-        }
-        
-        for ( int i = 0; i <= columns; i++) {
-            drawLine( i * BASE_WIDTH, 0, i * BASE_WIDTH, worldHeight, BLACK );
-        }
-        
     }
     
     private void drawTiles() {
@@ -151,12 +171,15 @@ public class GameWorld extends EngineFrame {
     
     private void drawStatistics( int x, int y ) {
         
-        fillRectangle( x - 10, y - 10, 440, 120, ColorUtils.fade( WHITE, 0.5 ) );
+        fillRectangle( x - 10, y - 10, 440, 290, ColorUtils.fade( WHITE, 0.5 ) );
         drawFPS( x, y );
         drawText( "    pos: " + hero.getPos().toString(), x, y += 20, BLACK );
         drawText( "prevPos: " + hero.getPos().toString(), x, y += 20, BLACK );
         drawText( "    vel: " + hero.getVel().toString(), x, y += 20, BLACK );
         drawText( "r jumps: " + hero.getRemainingJumps(), x, y += 20, BLACK );
+        
+        drawText( "Quadtree:", x, y += 20, BLACK );
+        drawQuadTree( x, y += 20, 0.05 );
         
     }
     
@@ -243,6 +266,65 @@ public class GameWorld extends EngineFrame {
         columns = maxColumn;
         worldWidth = columns * BASE_WIDTH;
         worldHeight = lines * BASE_WIDTH;
+        
+    }
+    
+    private void initAABBs() {
+        
+        aabbs = new ArrayList<>();
+        aabbs.add( hero.getAABB() );
+        
+        for ( Tile t : tiles ) {
+            aabbs.add( t.getAABB() );
+        }
+        
+    }
+    
+    private void calculateOverlaps( AABBQuadtreeNode node, double x, double y, double scale ) {
+        
+        if ( node.depth < quadtree.getMaxDepth() ) {
+            
+            int size = node.aabbs.size();
+            
+            for ( int i = 0; i < size; i++ ) {
+                for ( int j = i+1; j < size; j++ ) {
+                    try {
+                        AABB a = node.aabbs.get( i );
+                        AABB b = node.aabbs.get( j );
+                        if ( a.type != AABB.Type.STATIC || b.type != AABB.Type.STATIC ) {
+                            Rectangle ra = new Rectangle( a.x1 * scale, a.y1 * scale, ( a.x2 - a.x1 ) * scale, ( a.y2 - a.y1 ) * scale );
+                            Rectangle rb = new Rectangle( b.x1 * scale, b.y1 * scale, ( b.x2 - b.x1 ) * scale, ( b.y2 - b.y1 ) * scale );
+                            if ( CollisionUtils.checkCollisionRectangles( ra, rb ) ) {
+                                Rectangle ri = CollisionUtils.getCollisionRectangle( ra, rb );
+                                ri.x += x;
+                                ri.y += y;
+                                overlaps.add( ri );
+                            }
+                        }
+                    } catch ( IndexOutOfBoundsException | NullPointerException exc ) {
+                    }
+                }
+            }
+            
+            calculateOverlaps( node.nw, x, y, scale );
+            calculateOverlaps( node.ne, x, y, scale );
+            calculateOverlaps( node.sw, x, y, scale );
+            calculateOverlaps( node.se, x, y, scale );
+            
+        }
+        
+    }
+    
+    private void drawQuadTree( double x, double y, double scale ) {
+        
+        overlaps.clear();
+        calculateOverlaps( quadtree.getRoot(), x, y, scale );
+        
+        quadtree.draw( this, x, y, scale );
+        
+        for ( Rectangle r : overlaps ) {
+            r.fill( this, aabbOverlapColor );
+        }
         
     }
     

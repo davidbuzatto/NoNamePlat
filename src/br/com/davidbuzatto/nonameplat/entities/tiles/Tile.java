@@ -1,5 +1,6 @@
 package br.com.davidbuzatto.nonameplat.entities.tiles;
 
+import br.com.davidbuzatto.jsge.collision.aabb.AABB;
 import br.com.davidbuzatto.jsge.core.engine.EngineFrame;
 import br.com.davidbuzatto.jsge.geom.Rectangle;
 import br.com.davidbuzatto.jsge.image.Image;
@@ -20,14 +21,15 @@ public class Tile extends Entity {
     private Color color;
     private Image skin;
     
-    private Rectangle bb;
+    // AABB
+    private AABB aabb;
     
     public Tile( Vector2 pos, Color color, Image skin ) {
         this.pos = pos;
         this.dim = new Vector2( GameWorld.BASE_WIDTH, GameWorld.BASE_WIDTH );
         this.color = color;
         this.skin = skin;
-        bb = new Rectangle( pos.x, pos.y, dim.x, dim.y );
+        this.aabb = new AABB( pos.x, pos.y, pos.x + dim.x, pos.y + dim.y, AABB.Type.STATIC, this );
     }
     
     public Tile( Vector2 pos, Color color ) {
@@ -55,8 +57,8 @@ public class Tile extends Entity {
         return dim;
     }
 
-    public Rectangle getBB() {
-        return bb;
+    public AABB getAABB() {
+        return aabb;
     }
     
 }
