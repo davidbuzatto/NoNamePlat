@@ -34,7 +34,7 @@ public class Hero extends Entity {
     private Color color;
 
     private double walkSpeed;
-    private double runSpeed;
+    private double maxAcceleration;
     private double jumpSpeed;
     
     private double maxFallSpeed;
@@ -82,6 +82,13 @@ public class Hero extends Entity {
     private boolean running;
     private boolean pushing;
     
+    // acceleration
+    private int accelerationStep;
+    private int accelerationStepTick;
+    private double accelerationMaxStep;
+    private double nextAccelerationTickCounter;
+    private double nextAccelerationTickTime;
+    
     public Hero( Vector2 pos, Color color ) {
         
         this.pos = pos;
@@ -90,7 +97,7 @@ public class Hero extends Entity {
         this.vel = new Vector2();
         this.color = color;
         this.walkSpeed = 300;
-        this.runSpeed = 500;
+        this.maxAcceleration = 200;
         this.jumpSpeed = -450;
         this.maxFallSpeed = 600;
         
@@ -112,6 +119,12 @@ public class Hero extends Entity {
         this.running = false;
         this.pushing = false;
         
+        this.accelerationStep = 0;
+        this.accelerationStepTick = 1;
+        this.accelerationMaxStep = 10;
+        this.nextAccelerationTickCounter = 0;
+        this.nextAccelerationTickTime = 0.1;
+        
         loadImagesAndCreateAnimations();
         
     }
@@ -121,27 +134,57 @@ public class Hero extends Entity {
         pos.x += vel.x * delta;
         pos.y += vel.y * delta;
         
-        double currentSpeed;
         if ( e.isKeyDown( EngineFrame.KEY_CONTROL ) ) {
-            currentSpeed = runSpeed;
+            if ( accelerationStep < accelerationMaxStep ) {
+                nextAccelerationTickCounter += delta;
+                if ( nextAccelerationTickCounter > nextAccelerationTickTime ) {
+                    nextAccelerationTickCounter = 0;
+                    accelerationStep += accelerationStepTick;
+                    
+                }
+            }
             running = true;
         } else {
-            currentSpeed = walkSpeed;
+            accelerationStep = 0;
+            nextAccelerationTickCounter = 0;
             running = false;
+        }
+        
+        double currentSpeed = walkSpeed + maxAcceleration * ( accelerationStep / accelerationMaxStep );
+        
+        if ( accelerationStep > 5 ) {
+            runAnimationRight.setTimeToNextFrame( 0.03 );
+            runAnimationLeft.setTimeToNextFrame( 0.03 );
+        } else {
+            runAnimationRight.setTimeToNextFrame( 0.06 );
+            runAnimationLeft.setTimeToNextFrame( 0.06 );
         }
         
         pushing = false;
         
         if ( e.isKeyDown( EngineFrame.KEY_LEFT ) ) {
+            
+            if ( lookingState == State.LOOKING_RIGHT ) {
+                accelerationStep = 0;
+            }
+            
             vel.x = -currentSpeed;
             lookingState = State.LOOKING_LEFT;
             xState = State.MOVING;
+            
         } else if ( e.isKeyDown( EngineFrame.KEY_RIGHT ) ) {
+            
+            if ( lookingState == State.LOOKING_LEFT ) {
+                accelerationStep = 0;
+            }
+            
             vel.x = currentSpeed;
             lookingState = State.LOOKING_RIGHT;
             xState = State.MOVING;
+            
         } else {
             vel.x = 0;
+            accelerationStep = 0;
             xState = State.IDLE;
         }
         
@@ -215,7 +258,9 @@ public class Hero extends Entity {
                     if ( pushing ) {
                         pushAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
                     } else if ( running ) {
-                        dustAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                        if ( accelerationStep > 5 ) {
+                            dustAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                        }
                         runAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
                     } else {
                         walkAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
@@ -232,7 +277,9 @@ public class Hero extends Entity {
                     if ( pushing ) {
                         pushAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
                     } else if ( running ) {
-                        dustAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                        if ( accelerationStep > 5 ) {
+                            dustAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                        }
                         runAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
                     } else {
                         walkAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
@@ -310,10 +357,12 @@ public class Hero extends Entity {
                 case LEFT:
                     pos.x = tile.getPos().x + tile.getDim().x - cpLeftAdjust;
                     pushing = true;
+                    accelerationStep = 0;
                     break;
                 case RIGHT:
                     pos.x = tile.getPos().x - dim.x - cpRightAdjust;
                     pushing = true;
+                    accelerationStep = 0;
                     break;
                 case UP:
                     vel.y = 0;
@@ -384,23 +433,24 @@ public class Hero extends Entity {
         );
         
         this.runAnimationRight = new FrameByFrameAnimation<>( 
-            0.05,
+            0.06,
             AnimationUtils.getSpriteMapAnimationFrameList( runImageMap, 6, dim.x, dim.y ),
             true
         );
+        
         this.runAnimationLeft = new FrameByFrameAnimation<>( 
-            0.05,
+            0.06,
             AnimationUtils.getSpriteMapAnimationFrameList( runImageMap.copyFlipHorizontal(), 6, dim.x, dim.y, true ),
             true
         );
         
         this.dustAnimationRight = new FrameByFrameAnimation<>( 
-            0.05,
+            0.03,
             AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap, 6, dim.x, dim.y ),
             true
         );
         this.dustAnimationLeft = new FrameByFrameAnimation<>( 
-            0.05,
+            0.03,
             AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap.copyFlipHorizontal(), 6, dim.x, dim.y, true ),
             true
         );
@@ -454,6 +504,10 @@ public class Hero extends Entity {
 
     public int getRemainingJumps() {
         return remainingJumps;
+    }
+    
+    public boolean isMoving() {
+        return xState == State.MOVING;
     }
     
 }

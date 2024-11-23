@@ -8,6 +8,7 @@ import br.com.davidbuzatto.jsge.image.ImageUtils;
 import br.com.davidbuzatto.jsge.math.Vector2;
 import br.com.davidbuzatto.nonameplat.entities.characters.Hero;
 import br.com.davidbuzatto.nonameplat.entities.tiles.Tile;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,8 +26,8 @@ public class GameWorld extends EngineFrame {
     
     private int lines;
     private int columns;
-    private double width;
-    private double height;
+    private double worldWidth;
+    private double worldHeight;
     private double halfScreenWidth;
     private double halfScreenHeight;
     
@@ -35,6 +36,9 @@ public class GameWorld extends EngineFrame {
     
     private Map<Character, Image> tileSkins;
     private List<Tile> tiles;
+    
+    private Color backgroundColor;
+    private ParallaxEngine parallaxEngine;
     
     public GameWorld() {
         // 896 = 14 columns
@@ -66,29 +70,31 @@ public class GameWorld extends EngineFrame {
         
         processMapData( 
             """
-            G                       E
-            G                       E
-            G                       E
-            G                       E
-            G                       E
-            G                       E
-            G           IJJJJJK     E
-            G          L            E
-            G         L             E
-            G        L              E
-            G    p                  E
-            MBBBBBBBBBBBBBBBBBBBBBBBN
-            FFFFFFFFFFFFFFFFFFFFFFFFF
+            G                                                                  E
+            G                                                                  E
+            G                                                                  E
+            G                                                                  E
+            G                                                                  E
+            G                                                                  E
+            G           IJJJJJK                                                E
+            G          L                                                       E
+            G         L                                                        E
+            G        L                                                         E
+            G    p                                                             E
+            MBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBN
+            FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             """
         );
+        
+        backgroundColor = new Color( 44, 154, 208 );
+        parallaxEngine = new ParallaxEngine( worldWidth, getScreenWidth(), getScreenHeight(), 0.1 );
         
     }
     
     @Override
     public void update( double delta ) {
         
-        hero.update( this, width, height, tiles, delta );
-        
+        hero.update( this, worldWidth, worldHeight, tiles, delta );
         updateCamera();
         
     }
@@ -96,14 +102,12 @@ public class GameWorld extends EngineFrame {
     @Override
     public void draw() {
         
-        clearBackground( SKYBLUE );
+        clearBackground( backgroundColor );
+        parallaxEngine.draw( this, hero );
+        
         beginMode2D( camera );
-        
-        //drawTestBackground();
         drawTiles();
-        
         hero.draw( this );
-        
         endMode2D();
         
         drawStatistics( 20, 20 );
@@ -130,11 +134,11 @@ public class GameWorld extends EngineFrame {
         }
         
         for ( int i = 0; i <= lines; i++) {
-            drawLine( 0, i * BASE_WIDTH, width, i * BASE_WIDTH, BLACK );
+            drawLine( 0, i * BASE_WIDTH, worldWidth, i * BASE_WIDTH, BLACK );
         }
         
         for ( int i = 0; i <= columns; i++) {
-            drawLine( i * BASE_WIDTH, 0, i * BASE_WIDTH, height, BLACK );
+            drawLine( i * BASE_WIDTH, 0, i * BASE_WIDTH, worldHeight, BLACK );
         }
         
     }
@@ -160,16 +164,16 @@ public class GameWorld extends EngineFrame {
         
         if ( hero.getPos().x <= halfScreenWidth ) {
             camera.target.x = halfScreenWidth;
-        } else if ( hero.getPos().x >= width - halfScreenWidth ) {
-            camera.target.x = width - halfScreenWidth;
+        } else if ( hero.getPos().x >= worldWidth - halfScreenWidth ) {
+            camera.target.x = worldWidth - halfScreenWidth;
         } else {
             camera.target.x = hero.getPos().x;
         }
         
         if ( hero.getPos().y <= halfScreenHeight ) {
             camera.target.y = halfScreenHeight;
-        } else if ( hero.getPos().y >= height - halfScreenHeight ) {
-            camera.target.y = height - halfScreenHeight;
+        } else if ( hero.getPos().y >= worldHeight - halfScreenHeight ) {
+            camera.target.y = worldHeight - halfScreenHeight;
         } else {
             camera.target.y = hero.getPos().y;
         }
@@ -237,8 +241,8 @@ public class GameWorld extends EngineFrame {
         
         lines = currentLine;
         columns = maxColumn;
-        width = columns * BASE_WIDTH;
-        height = lines * BASE_WIDTH;
+        worldWidth = columns * BASE_WIDTH;
+        worldHeight = lines * BASE_WIDTH;
         
     }
     

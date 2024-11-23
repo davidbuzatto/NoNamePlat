@@ -1,5 +1,3 @@
-Fundo com parallax;
-Acelerar ao invés de sair correndo;
 Mudar o sistema de colisão para quadtree;
 Implementar terreno inclinado;
 Implementar inimigos;
