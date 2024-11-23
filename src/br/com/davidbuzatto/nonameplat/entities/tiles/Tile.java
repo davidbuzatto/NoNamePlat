@@ -2,7 +2,6 @@ package br.com.davidbuzatto.nonameplat.entities.tiles;
 
 import br.com.davidbuzatto.jsge.collision.aabb.AABB;
 import br.com.davidbuzatto.jsge.core.engine.EngineFrame;
-import br.com.davidbuzatto.jsge.geom.Rectangle;
 import br.com.davidbuzatto.jsge.image.Image;
 import br.com.davidbuzatto.jsge.math.Vector2;
 import br.com.davidbuzatto.nonameplat.GameWorld;
