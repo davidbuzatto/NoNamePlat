@@ -1,5 +1,6 @@
 package br.com.davidbuzatto.nonameplat.entities.characters;
 
+import br.com.davidbuzatto.jsge.animation.AnimationExecutionState;
 import br.com.davidbuzatto.jsge.animation.AnimationUtils;
 import br.com.davidbuzatto.jsge.animation.frame.FrameByFrameAnimation;
 import br.com.davidbuzatto.jsge.animation.frame.SpriteMapAnimationFrame;
@@ -8,6 +9,7 @@ import br.com.davidbuzatto.jsge.collision.aabb.AABB;
 import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtree;
 import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtreeNode;
 import br.com.davidbuzatto.jsge.core.engine.EngineFrame;
+import br.com.davidbuzatto.jsge.core.utils.ColorUtils;
 import br.com.davidbuzatto.jsge.geom.Rectangle;
 import br.com.davidbuzatto.jsge.image.Image;
 import br.com.davidbuzatto.jsge.image.ImageUtils;
@@ -32,6 +34,8 @@ public class BaseEnemy extends Entity {
     private Vector2 pos;
     private Vector2 prevPos;
     private Vector2 dim;
+    private Vector2 sliceDim;
+    private Vector2 posAdjust;
     private Vector2 vel;
     private Color color;
 
@@ -60,14 +64,12 @@ public class BaseEnemy extends Entity {
     private Rectangle cpRight;
     private Rectangle cpUp;
     private Rectangle cpDown;
-    private double cpLeftAdjust;
-    private double cpRightAdjust;
-    private double cpUpAdjust;
-    private double cpDownAdjust;
     
     // state management
     private State lookingState;
     private State xState;
+    private State yState;
+    private State helthState;
     
     // AABB
     private AABB aabb;
@@ -77,7 +79,9 @@ public class BaseEnemy extends Entity {
         this.walkSpeed = 200;
         this.pos = pos;
         this.prevPos = new Vector2();
-        this.dim = new Vector2( 80, 80 );
+        this.dim = new Vector2( 54, 60 );
+        this.sliceDim = new Vector2( 80, 80 );
+        this.posAdjust = new Vector2( this.sliceDim.x - this.dim.x - 5, this.sliceDim.y - this.dim.y );
         this.vel = new Vector2( -walkSpeed, 0.0 );
         this.color = color;
         this.maxFallSpeed = 600;
@@ -88,13 +92,11 @@ public class BaseEnemy extends Entity {
         this.cpRight = new Rectangle( 0, 0, CP_WIDTH_SML, CP_WIDTH_BIG );
         this.cpUp = new Rectangle( 0, 0, CP_WIDTH_BIG, CP_WIDTH_SML );
         this.cpDown = new Rectangle( 0, 0, CP_WIDTH_BIG, CP_WIDTH_SML );
-        this.cpLeftAdjust = 20;
-        this.cpRightAdjust = -5;
-        this.cpUpAdjust = 15;
-        this.cpDownAdjust = 10;
         
         this.lookingState = State.LOOKING_LEFT;
         this.xState = State.IDLE;
+        this.yState = State.ON_GROUND;
+        this.helthState = State.ALIVE;
         
         loadImagesAndCreateAnimations();
         
@@ -102,80 +104,122 @@ public class BaseEnemy extends Entity {
     
     public void update( double worldWidth, double worldHeight, List<Tile> tiles, AABBQuadtree quadtree, double delta ) {
         
-        pos.x += vel.x * delta;
-        pos.y += vel.y * delta;
-        
-        if ( vel.x < 0 ) {
-            lookingState = State.LOOKING_LEFT;
-            xState = State.MOVING;
-        } else if ( vel.x > 0 )  {
-            lookingState = State.LOOKING_RIGHT;
-            xState = State.MOVING;
-        } else {
-            xState = State.IDLE;
+        if ( helthState != State.DEAD ) {
+            
+            pos.x += vel.x * delta;
+            pos.y += vel.y * delta;
+
+            if ( vel.x < 0 ) {
+                lookingState = State.LOOKING_LEFT;
+                xState = State.MOVING;
+            } else if ( vel.x > 0 )  {
+                lookingState = State.LOOKING_RIGHT;
+                xState = State.MOVING;
+            } else {
+                xState = State.IDLE;
+            }
+
+            resolveCollisionQuadtree( quadtree );
+
+            if ( vel.y < 0 ) {
+                yState = State.JUMPING;
+            } else if ( vel.y > 0 ) {
+                yState = State.FALLING;
+            } else {
+                yState = State.ON_GROUND;
+            }
+
+            vel.y += GameWorld.GRAVITY;
+
+            if ( vel.y > maxFallSpeed ) {
+                vel.y = maxFallSpeed;
+            }
+
+            if ( helthState == State.ALIVE ) {
+                idleAnimationRight.update( delta );
+                idleAnimationLeft.update( delta );
+                walkAnimationRight.update( delta );
+                walkAnimationLeft.update( delta );
+            } else if ( helthState == State.DYING ) {
+                deathAnimationRight.update( delta );
+                deathAnimationLeft.update( delta );
+            }
+
+            if ( deathAnimationRight.getState() == AnimationExecutionState.FINISHED ) {
+                helthState = State.DEAD;
+                aabb.active = false;
+            }
+
+            prevPos.x = pos.x;
+            prevPos.y = pos.y;
+            aabb.moveTo( pos.x, pos.y );
+
+            updateCollisionProbes();
+            
         }
-        
-        resolveCollisionQuadtree( quadtree );
-        
-        vel.y += GameWorld.GRAVITY;
-        
-        if ( vel.y > maxFallSpeed ) {
-            vel.y = maxFallSpeed;
-        }
-        
-        idleAnimationRight.update( delta );
-        idleAnimationLeft.update( delta );
-        walkAnimationRight.update( delta );
-        walkAnimationLeft.update( delta );
-        
-        prevPos.x = pos.x;
-        prevPos.y = pos.y;
-        aabb.moveTo( pos.x, pos.y );
-        
-        updateCollisionProbes();
         
     }
     
     public void draw( EngineFrame e ) {
         
-        /*e.fillRectangle( pos.x, pos.y, dim.x, dim.y, color );
-        e.drawRectangle( pos.x, pos.y, dim.x, dim.y, EngineFrame.BLACK );*/
-        
         if ( lookingState == State.LOOKING_RIGHT ) {
-            if ( xState == State.MOVING ) {
-                walkAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
-            } else {
-                idleAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+            if ( helthState == State.ALIVE ) {
+                if ( yState == State.ON_GROUND || yState == State.FALLING ) {
+                    if ( xState == State.MOVING ) {
+                        walkAnimationRight.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
+                    } else {
+                        idleAnimationRight.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
+                    }
+                }
+            } else if ( helthState == State.DYING ) {
+                deathAnimationRight.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
             }
         } else {
-            if ( xState == State.MOVING ) {
-                walkAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
-            } else {
-                idleAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+            if ( helthState == State.ALIVE ) {
+                if ( yState == State.ON_GROUND || yState == State.FALLING ) {
+                    if ( xState == State.MOVING ) {
+                        walkAnimationLeft.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
+                    } else {
+                        idleAnimationLeft.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
+                    }
+                }
+            } else if ( helthState == State.DYING ) {
+                deathAnimationLeft.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
             }
         }
         
-        //drawCollisionProbes( e );
+        if ( GameWorld.SHOW_BOUNDARIES ) {
+            e.fillAABB( aabb, ColorUtils.fade( color, 0.4 ) );
+            e.drawAABB( aabb, EngineFrame.BLACK );
+        }
+        
+        if ( GameWorld.SHOW_COLLISION_PROBES ) {
+            drawCollisionProbes( e );
+        }
         
     }
     
     private void drawCollisionProbes( EngineFrame e ) {
         
-        e.fillRectangle( cpLeft, lookingState == State.LOOKING_LEFT ? EngineFrame.GREEN : EngineFrame.RED );
-        e.fillRectangle( cpRight, lookingState == State.LOOKING_RIGHT ? EngineFrame.GREEN : EngineFrame.RED );
-        e.fillRectangle( cpUp, EngineFrame.GREEN );
-        e.fillRectangle( cpDown, EngineFrame.GREEN );
+        e.fillRectangle( cpLeft, lookingState == State.LOOKING_LEFT ? GameWorld.CP_COLOR1 : GameWorld.CP_COLOR2 );
+        e.fillRectangle( cpRight, lookingState == State.LOOKING_RIGHT ? GameWorld.CP_COLOR1 : GameWorld.CP_COLOR2 );
+        e.fillRectangle( cpUp, yState == State.JUMPING ? GameWorld.CP_COLOR1 : GameWorld.CP_COLOR2 );
+        if ( yState == State.ON_GROUND ) {
+            e.fillRectangle( cpDown, GameWorld.CP_COLOR3 );
+        } else {
+            e.fillRectangle( cpDown, yState == State.FALLING ? GameWorld.CP_COLOR1 : GameWorld.CP_COLOR2 );
+        }
         
     }
     
     public void updateCollisionProbes() {
         
-        cpLeft.x = pos.x + cpLeftAdjust;
+        cpLeft.x = pos.x;
         cpLeft.y = pos.y + dim.y / 2 - cpLeft.height / 2;
-        cpRight.x = pos.x + dim.x - cpRight.width + cpRightAdjust;
+        cpRight.x = pos.x + dim.x - cpRight.width ;
         cpRight.y = pos.y + dim.y / 2 - cpRight.height / 2;
         cpUp.x = pos.x + dim.x / 2 - cpUp.width / 2;
-        cpUp.y = pos.y + cpUpAdjust;
+        cpUp.y = pos.y;
         cpDown.x = pos.x + dim.x / 2 - cpDown.width / 2;
         cpDown.y = pos.y + dim.y - cpDown.height;
         
@@ -220,8 +264,6 @@ public class BaseEnemy extends Entity {
                         if ( a.referencedObject instanceof BaseEnemy ) {
                             if ( b.referencedObject instanceof Tile t ) {
                                 resolveCollisionTile( t );
-                            } else {
-                                break;
                             }
                         }
                     } catch ( IndexOutOfBoundsException | NullPointerException exc ) {
@@ -248,11 +290,11 @@ public class BaseEnemy extends Entity {
                 vel.y = 0;
                 break;
             case LEFT:
-                pos.x = tile.getPos().x + tile.getDim().x - cpLeftAdjust;
+                pos.x = tile.getPos().x + tile.getDim().x;
                 vel.x = -vel.x;
                 break;
             case RIGHT:
-                pos.x = tile.getPos().x - dim.x - cpRightAdjust;
+                pos.x = tile.getPos().x - dim.x;
                 vel.x = -vel.x;
                 break;
             case UP:
@@ -273,25 +315,36 @@ public class BaseEnemy extends Entity {
         idleImageMap = ImageUtils.loadImage( "resources/images/sprites/enemies/bear/idle.png" );
         walkImageMap = ImageUtils.loadImage( "resources/images/sprites/enemies/bear/walk.png" );
         
+        deathAnimationLeft = new FrameByFrameAnimation<>( 
+            0.05,
+            AnimationUtils.getSpriteMapAnimationFrameList( deathImageMap, sliceDim.x, sliceDim.y ),
+            false
+        );
+        deathAnimationRight = new FrameByFrameAnimation<>( 
+            0.05,
+            AnimationUtils.getSpriteMapAnimationFrameList( deathImageMap.copyFlipHorizontal(), sliceDim.x, sliceDim.y, true ),
+            false
+        );
+        
         idleAnimationLeft = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap, sliceDim.x, sliceDim.y ),
             true
         );
         idleAnimationRight = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap.copyFlipHorizontal(), sliceDim.x, sliceDim.y, true ),
             true
         );
         
         walkAnimationLeft = new FrameByFrameAnimation<>( 
             0.05,
-            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap, sliceDim.x, sliceDim.y ),
             true
         );
         walkAnimationRight = new FrameByFrameAnimation<>( 
             0.05,
-            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap.copyFlipHorizontal(), sliceDim.x, sliceDim.y, true ),
             true
         );
         
@@ -319,6 +372,15 @@ public class BaseEnemy extends Entity {
 
     public AABB getAABB() {
         return aabb;
+    }
+    
+    public boolean isAlive() {
+        return this.helthState == State.ALIVE;
+    }
+    
+    public void prepareToDie() {
+        this.helthState = State.DYING;
+        this.vel.x = 0;
     }
     
 }

@@ -9,6 +9,7 @@ import br.com.davidbuzatto.jsge.collision.aabb.AABB;
 import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtree;
 import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtreeNode;
 import br.com.davidbuzatto.jsge.core.engine.EngineFrame;
+import br.com.davidbuzatto.jsge.core.utils.ColorUtils;
 import br.com.davidbuzatto.jsge.geom.Rectangle;
 import br.com.davidbuzatto.jsge.image.Image;
 import br.com.davidbuzatto.jsge.image.ImageUtils;
@@ -16,6 +17,7 @@ import br.com.davidbuzatto.jsge.math.Vector2;
 import br.com.davidbuzatto.nonameplat.GameWorld;
 import br.com.davidbuzatto.nonameplat.entities.CollisionType;
 import br.com.davidbuzatto.nonameplat.entities.Entity;
+import br.com.davidbuzatto.nonameplat.entities.items.Coin;
 import br.com.davidbuzatto.nonameplat.entities.tiles.Tile;
 import br.com.davidbuzatto.nonameplat.utils.Utils;
 import java.awt.Color;
@@ -34,6 +36,8 @@ public class Hero extends Entity {
     private Vector2 pos;
     private Vector2 prevPos;
     private Vector2 dim;
+    private Vector2 sliceDim;
+    private Vector2 posAdjust;
     private Vector2 vel;
     private Color color;
 
@@ -73,10 +77,6 @@ public class Hero extends Entity {
     private Rectangle cpRight;
     private Rectangle cpUp;
     private Rectangle cpDown;
-    private double cpLeftAdjust;
-    private double cpRightAdjust;
-    private double cpUpAdjust;
-    private double cpDownAdjust;
     
     // state management
     private State lookingState;
@@ -100,7 +100,9 @@ public class Hero extends Entity {
         
         this.pos = pos;
         this.prevPos = new Vector2();
-        this.dim = new Vector2( GameWorld.BASE_WIDTH, GameWorld.BASE_WIDTH );
+        this.dim = new Vector2( 40, 56 );
+        this.sliceDim = new Vector2( 64, 64 );
+        this.posAdjust = new Vector2( this.sliceDim.x - this.dim.x - 15, this.sliceDim.y - this.dim.y );
         this.vel = new Vector2();
         this.color = color;
         this.walkSpeed = 300;
@@ -117,10 +119,6 @@ public class Hero extends Entity {
         this.cpRight = new Rectangle( 0, 0, CP_WIDTH_SML, CP_WIDTH_BIG );
         this.cpUp = new Rectangle( 0, 0, CP_WIDTH_BIG, CP_WIDTH_SML );
         this.cpDown = new Rectangle( 0, 0, CP_WIDTH_BIG, CP_WIDTH_SML );
-        this.cpLeftAdjust = 10;
-        this.cpRightAdjust = -10;
-        this.cpUpAdjust = 10;
-        this.cpDownAdjust = 10;
         
         this.lookingState = State.LOOKING_RIGHT;
         this.xState = State.IDLE;
@@ -201,15 +199,7 @@ public class Hero extends Entity {
         resolveCollisionQuadtree( quadtree );
         
         if ( e.isKeyPressed( EngineFrame.KEY_SPACE ) && remainingJumps > 0 ) {
-            vel.y = jumpSpeed;
-            remainingJumps--;
-            jumpAnimationRight.reset();
-            jumpAnimationLeft.reset();
-            if ( remainingJumps == 0 ) {
-                doubleJumpPos.x = pos.x;
-                doubleJumpPos.y = pos.y;
-                doubleJumpDustAnimation.reset();
-            }
+            jump();
         }
         
         if ( vel.y < 0 ) {
@@ -257,9 +247,6 @@ public class Hero extends Entity {
     
     public void draw( EngineFrame e ) {
         
-        //e.fillRectangle( pos, dim, color );
-        //e.drawRectangle( pos, dim, EngineFrame.BLACK );
-        
         if ( remainingJumps == 0 && doubleJumpDustAnimation.getState() != AnimationExecutionState.FINISHED ) {
             doubleJumpDustAnimation.getCurrentFrame().draw( e, doubleJumpPos.x, doubleJumpPos.y );
         }
@@ -268,64 +255,71 @@ public class Hero extends Entity {
             if ( yState == State.ON_GROUND ) {
                 if ( xState == State.MOVING ) {
                     if ( pushing ) {
-                        pushAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                        pushAnimationRight.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                     } else if ( running ) {
                         if ( accelerationStep > 5 ) {
-                            dustAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                            dustAnimationRight.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                         }
-                        runAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                        runAnimationRight.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                     } else {
-                        walkAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                        walkAnimationRight.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                     }
                 } else {
-                    idleAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                    idleAnimationRight.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                 }
             } else {
-                jumpAnimationRight.getCurrentFrame().draw( e, pos.x, pos.y );
+                jumpAnimationRight.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
             }
         } else {
             if ( yState == State.ON_GROUND ) {
                 if ( xState == State.MOVING ) {
                     if ( pushing ) {
-                        pushAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                        pushAnimationLeft.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                     } else if ( running ) {
                         if ( accelerationStep > 5 ) {
-                            dustAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                            dustAnimationLeft.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                         }
-                        runAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                        runAnimationLeft.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                     } else {
-                        walkAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                        walkAnimationLeft.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                     }
                 } else {
-                    idleAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                    idleAnimationLeft.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
                 }
             } else {
-                jumpAnimationLeft.getCurrentFrame().draw( e, pos.x, pos.y );
+                jumpAnimationLeft.getCurrentFrame().draw( e, pos.x - posAdjust.x, pos.y - posAdjust.y );
             }
         }
         
-        //drawCollisionProbes( e );
+        if ( GameWorld.SHOW_BOUNDARIES ) {
+            e.fillAABB( aabb, ColorUtils.fade( color, 0.4 ) );
+            e.drawAABB( aabb, EngineFrame.BLACK );
+        }
+        
+        if ( GameWorld.SHOW_COLLISION_PROBES ) {
+            drawCollisionProbes( e );
+        }
         
     }
     
     private void drawCollisionProbes( EngineFrame e ) {
         
-        e.fillRectangle( cpLeft, lookingState == State.LOOKING_LEFT ? EngineFrame.GREEN : EngineFrame.RED );
-        e.fillRectangle( cpRight, lookingState == State.LOOKING_RIGHT ? EngineFrame.GREEN : EngineFrame.RED );
-        e.fillRectangle( cpUp, yState == State.JUMPING ? EngineFrame.GREEN : EngineFrame.RED );
+        e.fillRectangle( cpLeft, lookingState == State.LOOKING_LEFT ? GameWorld.CP_COLOR1 : GameWorld.CP_COLOR2 );
+        e.fillRectangle( cpRight, lookingState == State.LOOKING_RIGHT ? GameWorld.CP_COLOR1 : GameWorld.CP_COLOR2 );
+        e.fillRectangle( cpUp, yState == State.JUMPING ? GameWorld.CP_COLOR1 : GameWorld.CP_COLOR2 );
         if ( yState == State.ON_GROUND ) {
-            e.fillRectangle( cpDown, EngineFrame.BLUE );
+            e.fillRectangle( cpDown, GameWorld.CP_COLOR3 );
         } else {
-            e.fillRectangle( cpDown, yState == State.FALLING ? EngineFrame.GREEN : EngineFrame.RED );
+            e.fillRectangle( cpDown, yState == State.FALLING ? GameWorld.CP_COLOR1 : GameWorld.CP_COLOR2 );
         }
         
     }
     
     public void updateCollisionProbes() {
         
-        cpLeft.x = pos.x + cpLeftAdjust;
+        cpLeft.x = pos.x;
         cpLeft.y = pos.y + dim.y / 2 - cpLeft.height / 2;
-        cpRight.x = pos.x + dim.x - cpRight.width + cpRightAdjust;
+        cpRight.x = pos.x + dim.x - cpRight.width ;
         cpRight.y = pos.y + dim.y / 2 - cpRight.height / 2;
         cpUp.x = pos.x + dim.x / 2 - cpUp.width / 2;
         cpUp.y = pos.y;
@@ -397,8 +391,8 @@ public class Hero extends Entity {
                                 resolveCollisionTile( t );
                             } else if ( b.referencedObject instanceof BaseEnemy e ) {
                                 resolveCollisionEnemy( e );
-                            } else {
-                               break;
+                            } else if ( b.referencedObject instanceof Coin c ) {
+                                resolveCollisionCoin( c );
                             }
                         }
                     } catch ( IndexOutOfBoundsException | NullPointerException exc ) {
@@ -415,33 +409,49 @@ public class Hero extends Entity {
         
     }
     
-    public void resolveCollisionEnemy( BaseEnemy enemy ) {
+    public void resolveCollisionCoin( Coin coin ) {
         
-        CollisionType c = checkCollisionEnemy( enemy );
-        
-        switch ( c ) {
-            case DOWN:
-                pos.y = enemy.getPos().y - dim.y;
-                vel.y = 0;
-                remainingJumps = 2;
-                break;
-            case LEFT:
-                pos.x = enemy.getPos().x + enemy.getDim().x - cpLeftAdjust;
-                pushing = true;
-                accelerationStep = 0;
-                break;
-            case RIGHT:
-                pos.x = enemy.getPos().x - dim.x - cpRightAdjust;
-                pushing = true;
-                accelerationStep = 0;
-                break;
-            case UP:
-                vel.y = 0;
-                pos.y = enemy.getPos().y + enemy.getDim().y;
-                break;
+        if ( coin.isActive() ) {
+            if ( CollisionUtils.checkCollisionAABBs( aabb, coin.getAABB() ) ) {
+                coin.collect();
+            }
         }
         
-        updateCollisionProbes();
+    }
+    
+    public void resolveCollisionEnemy( BaseEnemy enemy ) {
+        
+        if ( enemy.isAlive() ) {
+            
+            CollisionType c = checkCollisionEnemy( enemy );
+
+            switch ( c ) {
+                case DOWN:
+                    pos.y = enemy.getPos().y - dim.y;
+                    vel.y = 0;
+                    remainingJumps = 2;
+                    jump();
+                    enemy.prepareToDie();
+                    break;
+                case LEFT:
+                    pos.x = enemy.getPos().x + enemy.getDim().x;
+                    pushing = true;
+                    accelerationStep = 0;
+                    break;
+                case RIGHT:
+                    pos.x = enemy.getPos().x - dim.x;
+                    pushing = true;
+                    accelerationStep = 0;
+                    break;
+                case UP:
+                    vel.y = 0;
+                    pos.y = enemy.getPos().y + enemy.getDim().y;
+                    break;
+            }
+
+            updateCollisionProbes();
+            
+        }
         
     }
     
@@ -456,12 +466,12 @@ public class Hero extends Entity {
                 remainingJumps = 2;
                 break;
             case LEFT:
-                pos.x = tile.getPos().x + tile.getDim().x - cpLeftAdjust;
+                pos.x = tile.getPos().x + tile.getDim().x;
                 pushing = true;
                 accelerationStep = 0;
                 break;
             case RIGHT:
-                pos.x = tile.getPos().x - dim.x - cpRightAdjust;
+                pos.x = tile.getPos().x - dim.x;
                 pushing = true;
                 accelerationStep = 0;
                 break;
@@ -505,6 +515,18 @@ public class Hero extends Entity {
         
     }*/
     
+    private void jump() {
+        vel.y = jumpSpeed;
+        remainingJumps--;
+        jumpAnimationRight.reset();
+        jumpAnimationLeft.reset();
+        if ( remainingJumps == 0 ) {
+            doubleJumpPos.x = pos.x;
+            doubleJumpPos.y = pos.y;
+            doubleJumpDustAnimation.reset();
+        }
+    }
+    
     private void loadImagesAndCreateAnimations() {
         
         this.idleImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/idle.png" );
@@ -529,74 +551,74 @@ public class Hero extends Entity {
         
         idleAnimationRight = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap, sliceDim.x, sliceDim.y ),
             true
         );
         idleAnimationLeft = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap.copyFlipHorizontal(), sliceDim.x, sliceDim.y, true ),
             true
         );
         
         walkAnimationRight = new FrameByFrameAnimation<>( 
             0.07,
-            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap, sliceDim.x, sliceDim.y ),
             true
         );
         walkAnimationLeft = new FrameByFrameAnimation<>( 
             0.07,
-            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap.copyFlipHorizontal(), sliceDim.x, sliceDim.y, true ),
             true
         );
         
         runAnimationRight = new FrameByFrameAnimation<>( 
             0.06,
-            AnimationUtils.getSpriteMapAnimationFrameList( runImageMap, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( runImageMap, sliceDim.x, sliceDim.y ),
             true
         );
         
         runAnimationLeft = new FrameByFrameAnimation<>( 
             0.06,
-            AnimationUtils.getSpriteMapAnimationFrameList( runImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( runImageMap.copyFlipHorizontal(), sliceDim.x, sliceDim.y, true ),
             true
         );
         
         dustAnimationRight = new FrameByFrameAnimation<>( 
             0.03,
-            AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap, sliceDim.x, sliceDim.y ),
             true
         );
         dustAnimationLeft = new FrameByFrameAnimation<>( 
             0.03,
-            AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap.copyFlipHorizontal(), sliceDim.x, sliceDim.y, true ),
             true
         );
         
         pushAnimationRight = new FrameByFrameAnimation<>( 
             0.07,
-            AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap, sliceDim.x, sliceDim.y ),
             true
         );
         pushAnimationLeft = new FrameByFrameAnimation<>( 
             0.07,
-            AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap.copyFlipHorizontal(), sliceDim.x, sliceDim.y, true ),
             true
         );
         
         jumpAnimationRight = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap, sliceDim.x, sliceDim.y ),
             false
         );
         jumpAnimationLeft = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap.copyFlipHorizontal(), sliceDim.x, sliceDim.y, true ),
             false
         );
         
         doubleJumpDustAnimation = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( doubleJumpDustImageMap, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( doubleJumpDustImageMap, sliceDim.x, sliceDim.y ),
             false
         );
         doubleJumpDustAnimation.setStopAtLastFrameWhenFinished( false );

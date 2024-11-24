@@ -13,6 +13,7 @@ import br.com.davidbuzatto.jsge.image.ImageUtils;
 import br.com.davidbuzatto.jsge.math.Vector2;
 import br.com.davidbuzatto.nonameplat.entities.characters.BaseEnemy;
 import br.com.davidbuzatto.nonameplat.entities.characters.Hero;
+import br.com.davidbuzatto.nonameplat.entities.items.Coin;
 import br.com.davidbuzatto.nonameplat.entities.tiles.Tile;
 import br.com.davidbuzatto.nonameplat.utils.Utils;
 import java.awt.Color;
@@ -31,6 +32,16 @@ public class GameWorld extends EngineFrame {
     
     public static final double GRAVITY = 20;
     public static final double BASE_WIDTH = 64;
+    public static final boolean SHOW_BOUNDARIES = false;
+    public static final boolean SHOW_COLLISION_PROBES = false;
+    
+    // statistics
+    private boolean showStatistics = false;
+    
+    public static final Color CP_COLOR1 = ColorUtils.fade( GREEN, 0.7 );
+    public static final Color CP_COLOR2 = ColorUtils.fade( RED, 0.7 );
+    public static final Color CP_COLOR3 = ColorUtils.fade( BLUE, 0.7 );
+    public static final Color CP_COLOR4 = ColorUtils.fade( GOLD, 0.7 );
     
     private int lines;
     private int columns;
@@ -43,6 +54,7 @@ public class GameWorld extends EngineFrame {
     private Camera2D camera;
     
     private List<BaseEnemy> enemies;
+    private List<Coin> coins;
     
     private Map<Character, Image> tileSkins;
     private List<Tile> tiles;
@@ -59,9 +71,6 @@ public class GameWorld extends EngineFrame {
     private List<AABB> aabbs;
     private AABBQuadtree quadtree;
     private List<Rectangle> overlaps;
-    
-    // statistics
-    private boolean showStatistics;
     
     private Image heroIcon;
     
@@ -106,18 +115,18 @@ public class GameWorld extends EngineFrame {
             G                                            E
             G                                            E
             G                                            E
-            G           IJJJJJK                          E
-            G          L                                 E
-            G         L                                  E
-            G        L                                   E
-            G p   e                                      E
+            G                e                           E
+            G         IJJJJJJK   L   e    L              E
+            G        Lcccccccc    IJJJJJJK               E
+            G       Lccccccccc                           E
+            G   p   cccccccccc                           E
             MBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBN
             FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             """
         );
         
         backgroundColor = new Color( 44, 154, 208 );
-        parallaxEngine = new ParallaxEngine( worldWidth, getScreenWidth(), getScreenHeight(), 0.1 );
+        parallaxEngine = new ParallaxEngine( worldWidth, worldHeight, getScreenWidth(), getScreenHeight(), 0.1 );
         
         qtWidth = (int) worldWidth;
         qtHeight = qtWidth;
@@ -128,8 +137,6 @@ public class GameWorld extends EngineFrame {
         initAABBs();
         quadtree = new AABBQuadtree( aabbs, qtWidth, qtHeight, maxTreeDepth );
         overlaps = new CopyOnWriteArrayList<>();
-        
-        showStatistics = true;
         
     }
     
@@ -146,6 +153,8 @@ public class GameWorld extends EngineFrame {
         
         hero.update( this, worldWidth, worldHeight, tiles, quadtree, delta );
         updateEnemies( delta );
+        updateCoins( delta );
+        
         quadtree.update();
         updateCamera();
         
@@ -158,9 +167,12 @@ public class GameWorld extends EngineFrame {
         parallaxEngine.draw( this, hero );
         
         beginMode2D( camera );
+        
         drawTiles();
-        hero.draw( this );
         drawEnemies();
+        drawCoins();
+        hero.draw( this );
+        
         endMode2D();
         
         if ( showStatistics ) {
@@ -178,6 +190,18 @@ public class GameWorld extends EngineFrame {
     private void updateEnemies( double delta ) {
         for ( BaseEnemy e : enemies ) {
             e.update( worldWidth, worldHeight, tiles, quadtree, delta );
+        }
+    }
+    
+    private void drawCoins() {
+        for ( Coin c : coins ) {
+            c.draw( this );
+        }
+    }
+    
+    private void updateCoins( double delta ) {
+        for ( Coin c : coins ) {
+            c.update( delta );
         }
     }
     
@@ -240,6 +264,7 @@ public class GameWorld extends EngineFrame {
         
         tiles = new ArrayList<>();
         enemies = new ArrayList<>();
+        coins = new ArrayList<>();
         
         for ( char c : mapData.toCharArray() ) {
             if ( c == '\n' ) {
@@ -267,6 +292,14 @@ public class GameWorld extends EngineFrame {
                             enemies.add( 
                                 new BaseEnemy( 
                                     new Vector2( currentColumn * BASE_WIDTH, currentLine * BASE_WIDTH ), 
+                                    RED
+                                )
+                            );
+                            break;
+                        case 'c':
+                            coins.add( 
+                                new Coin( 
+                                    new Vector2( currentColumn * BASE_WIDTH + BASE_WIDTH / 2 - 17, currentLine * BASE_WIDTH + BASE_WIDTH / 2 - 17 ), 
                                     RED
                                 )
                             );
@@ -303,6 +336,10 @@ public class GameWorld extends EngineFrame {
         
         for ( BaseEnemy e : enemies ) {
             aabbs.add( e.getAABB() );
+        }
+        
+        for ( Coin c : coins ) {
+            aabbs.add( c.getAABB() );
         }
         
         for ( Tile t : tiles ) {

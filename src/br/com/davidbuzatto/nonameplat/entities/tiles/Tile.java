@@ -2,6 +2,7 @@ package br.com.davidbuzatto.nonameplat.entities.tiles;
 
 import br.com.davidbuzatto.jsge.collision.aabb.AABB;
 import br.com.davidbuzatto.jsge.core.engine.EngineFrame;
+import br.com.davidbuzatto.jsge.core.utils.ColorUtils;
 import br.com.davidbuzatto.jsge.image.Image;
 import br.com.davidbuzatto.jsge.math.Vector2;
 import br.com.davidbuzatto.nonameplat.GameWorld;
@@ -40,12 +41,19 @@ public class Tile extends Entity {
     }
     
     public void draw( EngineFrame e ) {
+        
         if ( skin != null ) {
             e.drawImage( skin, pos.x, pos.y );
         } else {
             e.fillRectangle( pos, dim, color );
             e.drawRectangle( pos, dim, EngineFrame.BLACK );
         }
+        
+        if ( GameWorld.SHOW_BOUNDARIES ) {
+            e.fillAABB( aabb, ColorUtils.fade( color, 0.2 ) );
+            e.drawAABB( aabb, EngineFrame.BLACK );
+        }
+        
     }
 
     public Vector2 getPos() {

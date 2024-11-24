@@ -1,6 +1,5 @@
-Implementar inimigo base;
-Parallax na vertical???? (ficaria legal!!!)
-Implementar itens;
+Animação ao pegar moeda?
+HUD;
 Três heróis.
 Implementar controle via joystick;
 Implementar terreno inclinado;
