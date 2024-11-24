@@ -334,6 +334,28 @@ public class Hero extends Entity {
         
     }
     
+    public CollisionType checkCollisionEnemy( BaseEnemy enemy ) {
+        
+        if ( CollisionUtils.checkCollisionRectangleAABB( cpDown, enemy.getAABB() ) ) {
+            return CollisionType.DOWN;
+        }
+        
+        if ( CollisionUtils.checkCollisionRectangleAABB( cpLeft, enemy.getAABB() ) ) {
+            return CollisionType.LEFT;
+        }
+        
+        if ( CollisionUtils.checkCollisionRectangleAABB( cpRight, enemy.getAABB() ) ) {
+            return CollisionType.RIGHT;
+        }
+        
+        if ( CollisionUtils.checkCollisionRectangleAABB( cpUp, enemy.getAABB() ) ) {
+            return CollisionType.UP;
+        }
+        
+        return CollisionType.NONE;
+        
+    }
+    
     public CollisionType checkCollisionTile( Tile tile ) {
         
         if ( CollisionUtils.checkCollisionRectangleAABB( cpDown, tile.getAABB() ) ) {
@@ -370,15 +392,15 @@ public class Hero extends Entity {
                     try {
                         AABB a = node.aabbs.get( i );
                         AABB b = node.aabbs.get( j );
-                        //if ( a.active && b.active ) {
-                            if ( a.referencedObject instanceof Hero ) {
-                                if ( b.referencedObject instanceof Tile t ) {
-                                    resolveCollisionTile( t );
-                                } else {
-                                    break;
-                                }
+                        if ( a.referencedObject instanceof Hero ) {
+                            if ( b.referencedObject instanceof Tile t ) {
+                                resolveCollisionTile( t );
+                            } else if ( b.referencedObject instanceof BaseEnemy e ) {
+                                resolveCollisionEnemy( e );
+                            } else {
+                               break;
                             }
-                        //}
+                        }
                     } catch ( IndexOutOfBoundsException | NullPointerException exc ) {
                     }
                 }
@@ -390,6 +412,36 @@ public class Hero extends Entity {
             resolveCollisionQuadnode( node.se, maxTreeDepth );
             
         }
+        
+    }
+    
+    public void resolveCollisionEnemy( BaseEnemy enemy ) {
+        
+        CollisionType c = checkCollisionEnemy( enemy );
+        
+        switch ( c ) {
+            case DOWN:
+                pos.y = enemy.getPos().y - dim.y;
+                vel.y = 0;
+                remainingJumps = 2;
+                break;
+            case LEFT:
+                pos.x = enemy.getPos().x + enemy.getDim().x - cpLeftAdjust;
+                pushing = true;
+                accelerationStep = 0;
+                break;
+            case RIGHT:
+                pos.x = enemy.getPos().x - dim.x - cpRightAdjust;
+                pushing = true;
+                accelerationStep = 0;
+                break;
+            case UP:
+                vel.y = 0;
+                pos.y = enemy.getPos().y + enemy.getDim().y;
+                break;
+        }
+        
+        updateCollisionProbes();
         
     }
     
@@ -456,98 +508,98 @@ public class Hero extends Entity {
     private void loadImagesAndCreateAnimations() {
         
         this.idleImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/idle.png" );
-        this.walkImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/walk.png" );
-        this.runImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/run.png" );
-        this.dustImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/dust.png" );
-        this.pushImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/push.png" );
-        this.jumpImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/jump.png" );
-        this.doubleJumpDustImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/doubleJumpDust.png" );
+        walkImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/walk.png" );
+        runImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/run.png" );
+        dustImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/dust.png" );
+        pushImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/push.png" );
+        jumpImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/jump.png" );
+        doubleJumpDustImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/doubleJumpDust.png" );
         
         Image[] images = {
-            this.idleImageMap,
-            this.walkImageMap,
-            this.runImageMap,
-            this.pushImageMap,
-            this.jumpImageMap
+            idleImageMap,
+            walkImageMap,
+            runImageMap,
+            pushImageMap,
+            jumpImageMap
         };
         
         for ( Image image : images ) {
             Utils.replaceHeroImageColors( image );
         }
         
-        this.idleAnimationRight = new FrameByFrameAnimation<>( 
+        idleAnimationRight = new FrameByFrameAnimation<>( 
             0.1,
             AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap, dim.x, dim.y ),
             true
         );
-        this.idleAnimationLeft = new FrameByFrameAnimation<>( 
+        idleAnimationLeft = new FrameByFrameAnimation<>( 
             0.1,
             AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         
-        this.walkAnimationRight = new FrameByFrameAnimation<>( 
+        walkAnimationRight = new FrameByFrameAnimation<>( 
             0.07,
             AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap, dim.x, dim.y ),
             true
         );
-        this.walkAnimationLeft = new FrameByFrameAnimation<>( 
+        walkAnimationLeft = new FrameByFrameAnimation<>( 
             0.07,
             AnimationUtils.getSpriteMapAnimationFrameList( walkImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         
-        this.runAnimationRight = new FrameByFrameAnimation<>( 
+        runAnimationRight = new FrameByFrameAnimation<>( 
             0.06,
             AnimationUtils.getSpriteMapAnimationFrameList( runImageMap, dim.x, dim.y ),
             true
         );
         
-        this.runAnimationLeft = new FrameByFrameAnimation<>( 
+        runAnimationLeft = new FrameByFrameAnimation<>( 
             0.06,
             AnimationUtils.getSpriteMapAnimationFrameList( runImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         
-        this.dustAnimationRight = new FrameByFrameAnimation<>( 
+        dustAnimationRight = new FrameByFrameAnimation<>( 
             0.03,
             AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap, dim.x, dim.y ),
             true
         );
-        this.dustAnimationLeft = new FrameByFrameAnimation<>( 
+        dustAnimationLeft = new FrameByFrameAnimation<>( 
             0.03,
             AnimationUtils.getSpriteMapAnimationFrameList( dustImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         
-        this.pushAnimationRight = new FrameByFrameAnimation<>( 
+        pushAnimationRight = new FrameByFrameAnimation<>( 
             0.07,
             AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap, dim.x, dim.y ),
             true
         );
-        this.pushAnimationLeft = new FrameByFrameAnimation<>( 
+        pushAnimationLeft = new FrameByFrameAnimation<>( 
             0.07,
             AnimationUtils.getSpriteMapAnimationFrameList( pushImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         
-        this.jumpAnimationRight = new FrameByFrameAnimation<>( 
+        jumpAnimationRight = new FrameByFrameAnimation<>( 
             0.1,
             AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap, dim.x, dim.y ),
             false
         );
-        this.jumpAnimationLeft = new FrameByFrameAnimation<>( 
+        jumpAnimationLeft = new FrameByFrameAnimation<>( 
             0.1,
             AnimationUtils.getSpriteMapAnimationFrameList( jumpImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             false
         );
         
-        this.doubleJumpDustAnimation = new FrameByFrameAnimation<>( 
+        doubleJumpDustAnimation = new FrameByFrameAnimation<>( 
             0.1,
             AnimationUtils.getSpriteMapAnimationFrameList( doubleJumpDustImageMap, dim.x, dim.y ),
             false
         );
-        this.doubleJumpDustAnimation.setStopAtLastFrameWhenFinished( false );
+        doubleJumpDustAnimation.setStopAtLastFrameWhenFinished( false );
         
     }
     

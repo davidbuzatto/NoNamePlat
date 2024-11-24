@@ -1,8 +1,5 @@
 package br.com.davidbuzatto.nonameplat;
 
-import br.com.davidbuzatto.jsge.animation.AnimationUtils;
-import br.com.davidbuzatto.jsge.animation.frame.FrameByFrameAnimation;
-import br.com.davidbuzatto.jsge.animation.frame.SpriteMapAnimationFrame;
 import br.com.davidbuzatto.jsge.collision.CollisionUtils;
 import br.com.davidbuzatto.jsge.collision.aabb.AABB;
 import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtree;
@@ -14,6 +11,7 @@ import br.com.davidbuzatto.jsge.geom.Rectangle;
 import br.com.davidbuzatto.jsge.image.Image;
 import br.com.davidbuzatto.jsge.image.ImageUtils;
 import br.com.davidbuzatto.jsge.math.Vector2;
+import br.com.davidbuzatto.nonameplat.entities.characters.BaseEnemy;
 import br.com.davidbuzatto.nonameplat.entities.characters.Hero;
 import br.com.davidbuzatto.nonameplat.entities.tiles.Tile;
 import br.com.davidbuzatto.nonameplat.utils.Utils;
@@ -43,6 +41,8 @@ public class GameWorld extends EngineFrame {
     
     private Hero hero;
     private Camera2D camera;
+    
+    private List<BaseEnemy> enemies;
     
     private Map<Character, Image> tileSkins;
     private List<Tile> tiles;
@@ -110,7 +110,7 @@ public class GameWorld extends EngineFrame {
             G          L                                 E
             G         L                                  E
             G        L                                   E
-            G    p                                       E
+            G p   e                                      E
             MBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBN
             FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             """
@@ -145,6 +145,7 @@ public class GameWorld extends EngineFrame {
         }
         
         hero.update( this, worldWidth, worldHeight, tiles, quadtree, delta );
+        updateEnemies( delta );
         quadtree.update();
         updateCamera();
         
@@ -159,12 +160,25 @@ public class GameWorld extends EngineFrame {
         beginMode2D( camera );
         drawTiles();
         hero.draw( this );
+        drawEnemies();
         endMode2D();
         
         if ( showStatistics ) {
             drawStatistics( 20, 20 );
         }
     
+    }
+    
+    private void drawEnemies() {
+        for ( BaseEnemy e : enemies ) {
+            e.draw( this );
+        }
+    }
+    
+    private void updateEnemies( double delta ) {
+        for ( BaseEnemy e : enemies ) {
+            e.update( worldWidth, worldHeight, tiles, quadtree, delta );
+        }
     }
     
     private void drawTiles() {
@@ -225,6 +239,7 @@ public class GameWorld extends EngineFrame {
         int maxColumn = 0;
         
         tiles = new ArrayList<>();
+        enemies = new ArrayList<>();
         
         for ( char c : mapData.toCharArray() ) {
             if ( c == '\n' ) {
@@ -247,6 +262,14 @@ public class GameWorld extends EngineFrame {
                             hero.getPos().x = currentColumn * BASE_WIDTH;
                             hero.getPos().y = currentLine * BASE_WIDTH;
                             hero.updateCollisionProbes();
+                            break;
+                        case 'e':
+                            enemies.add( 
+                                new BaseEnemy( 
+                                    new Vector2( currentColumn * BASE_WIDTH, currentLine * BASE_WIDTH ), 
+                                    RED
+                                )
+                            );
                             break;
                         default:
                             if ( c != ' ' ) {
@@ -277,6 +300,10 @@ public class GameWorld extends EngineFrame {
         
         aabbs = new ArrayList<>();
         aabbs.add( hero.getAABB() );
+        
+        for ( BaseEnemy e : enemies ) {
+            aabbs.add( e.getAABB() );
+        }
         
         for ( Tile t : tiles ) {
             aabbs.add( t.getAABB() );
