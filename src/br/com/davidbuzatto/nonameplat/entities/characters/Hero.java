@@ -455,13 +455,13 @@ public class Hero extends Entity {
     
     private void loadImagesAndCreateAnimations() {
         
-        this.idleImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/idle_4.png" );
-        this.walkImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/walk_6.png" );
-        this.runImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/run_6.png" );
-        this.dustImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/dust_6.png" );
-        this.pushImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/push_6.png" );
-        this.jumpImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/jump_8.png" );
-        this.doubleJumpDustImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/doubleJumpDust_5.png" );
+        this.idleImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/idle.png" );
+        this.walkImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/walk.png" );
+        this.runImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/run.png" );
+        this.dustImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/dust.png" );
+        this.pushImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/push.png" );
+        this.jumpImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/jump.png" );
+        this.doubleJumpDustImageMap = ImageUtils.loadImage( "resources/images/sprites/hero/doubleJumpDust.png" );
         
         Image[] images = {
             this.idleImageMap,
@@ -477,12 +477,12 @@ public class Hero extends Entity {
         
         this.idleAnimationRight = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap, 4, dim.x, dim.y ),
+            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap, dim.x, dim.y ),
             true
         );
         this.idleAnimationLeft = new FrameByFrameAnimation<>( 
             0.1,
-            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap.copyFlipHorizontal(), 4, dim.x, dim.y, true ),
+            AnimationUtils.getSpriteMapAnimationFrameList( idleImageMap.copyFlipHorizontal(), dim.x, dim.y, true ),
             true
         );
         

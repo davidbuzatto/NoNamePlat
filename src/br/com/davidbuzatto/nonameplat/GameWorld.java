@@ -1,5 +1,8 @@
 package br.com.davidbuzatto.nonameplat;
 
+import br.com.davidbuzatto.jsge.animation.AnimationUtils;
+import br.com.davidbuzatto.jsge.animation.frame.FrameByFrameAnimation;
+import br.com.davidbuzatto.jsge.animation.frame.SpriteMapAnimationFrame;
 import br.com.davidbuzatto.jsge.collision.CollisionUtils;
 import br.com.davidbuzatto.jsge.collision.aabb.AABB;
 import br.com.davidbuzatto.jsge.collision.aabb.AABBQuadtree;
@@ -75,6 +78,7 @@ public class GameWorld extends EngineFrame {
         Utils.replaceHeroImageColors( heroIcon );
         setWindowIcon( heroIcon );
         
+        //setDefaultFont( loadFont( "resources/fonts/Planes_ValMore.ttf" ) );
         setDefaultFontSize( 20 );
         
         halfScreenWidth = getScreenWidth() / 2;
@@ -205,7 +209,7 @@ public class GameWorld extends EngineFrame {
     
     private void loadTileSkins() {
         
-        String tilePath = "resources/images/tiles/tile%c.png";
+        String tilePath = "resources/images/tiles/field/tile%c.png";
         
         tileSkins = new HashMap<>();
         for ( char c = 'A'; c <= 'N'; c++ ) {

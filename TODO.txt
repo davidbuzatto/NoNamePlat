@@ -1,5 +1,8 @@
-Implementar inimigos;
+Implementar inimigo base;
+Parallax na vertical???? (ficaria legal!!!)
 Implementar itens;
+Três heróis.
 Implementar controle via joystick;
 Implementar terreno inclinado;
 Cenários com múltiplas camadas -> implementar um editor
+Implementar elementos do cenário;

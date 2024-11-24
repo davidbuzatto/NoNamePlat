@@ -24,13 +24,13 @@ public class ParallaxEngine {
     public ParallaxEngine( double worldWidth, double screenWidth, double screenHeight, double baseLayerSpeed ) {
         
         this.images = new Image[]{
-            ImageUtils.loadImage( "resources/images/background/7.png" ),
-            ImageUtils.loadImage( "resources/images/background/6.png" ),
-            ImageUtils.loadImage( "resources/images/background/5.png" ),
-            ImageUtils.loadImage( "resources/images/background/4.png" ),
-            ImageUtils.loadImage( "resources/images/background/3.png" ),
-            ImageUtils.loadImage( "resources/images/background/2.png" ),
-            ImageUtils.loadImage( "resources/images/background/1.png" )
+            ImageUtils.loadImage( "resources/images/background/field/7.png" ),
+            ImageUtils.loadImage( "resources/images/background/field/6.png" ),
+            ImageUtils.loadImage( "resources/images/background/field/5.png" ),
+            ImageUtils.loadImage( "resources/images/background/field/4.png" ),
+            ImageUtils.loadImage( "resources/images/background/field/3.png" ),
+            ImageUtils.loadImage( "resources/images/background/field/2.png" ),
+            ImageUtils.loadImage( "resources/images/background/field/1.png" )
         };
         
         this.worldWidth = worldWidth;
