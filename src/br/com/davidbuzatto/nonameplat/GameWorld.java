@@ -30,9 +30,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class GameWorld extends EngineFrame {
     
-    public static final double GRAVITY = 20;
+    public static final double GRAVITY = 1200;
     public static final double BASE_WIDTH = 64;
-    public static final boolean SHOW_BOUNDARIES = false;
+    public static final boolean SHOW_BOUNDARIES = true;
     public static final boolean SHOW_COLLISION_PROBES = false;
     
     // statistics
@@ -73,6 +73,15 @@ public class GameWorld extends EngineFrame {
     private List<Rectangle> overlaps;
     
     private Image heroIcon;
+    
+    // FPS debugging
+    private double timeCount;
+    private boolean setup;
+    private double startX;
+    private boolean startCount;
+    private boolean endCount;
+    private int frameCount;
+    private static final boolean DEBUG_FPS = false;
     
     public GameWorld() {
         // 896 = 14 columns
@@ -143,6 +152,10 @@ public class GameWorld extends EngineFrame {
     @Override
     public void update( double delta ) {
         
+        if ( DEBUG_FPS ) {
+            setupDebugFPS( delta );
+        }
+        
         if ( isKeyPressed( KEY_F1 ) ) {
             showStatistics = !showStatistics;
         }
@@ -177,6 +190,10 @@ public class GameWorld extends EngineFrame {
         
         if ( showStatistics ) {
             drawStatistics( 20, 20 );
+        }
+        
+        if ( DEBUG_FPS ) {
+            drawDebugFps();
         }
     
     }
@@ -392,6 +409,42 @@ public class GameWorld extends EngineFrame {
         
         for ( Rectangle r : overlaps ) {
             r.fill( this, aabbOverlapColor );
+        }
+        
+    }
+    
+    private void setupDebugFPS( double delta ) {
+        
+        if ( !setup ) {
+            startX = hero.getPos().x;
+            setup = true;
+        }
+        
+        if ( hero.getVel().x > 0 && !endCount ) {
+            startCount = true;
+        }
+        
+        if ( hero.getPos().x > startX + 300 && !endCount ) {
+            endCount = true;
+            startCount = false;
+        }
+        
+        if ( startCount ) {
+            timeCount += delta;
+            frameCount++;
+        }
+        
+    }
+    
+    private void drawDebugFps() {
+        
+        Vector2 v = camera.getWorldToScreen( startX, 0 );
+        drawLine( v.x, v.y, v.x, getScreenHeight(), WHITE );
+        drawLine( v.x + 300, v.y, v.x + 300, getScreenHeight(), WHITE );
+        
+        if ( endCount ) {
+            drawText( String.format( "time: %.2f(s)", timeCount ), 10, getScreenHeight() - 40, 20, WHITE );
+            drawText( String.format( "frames: %d", frameCount ), 10, getScreenHeight() - 20, 20, WHITE );
         }
         
     }

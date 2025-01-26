@@ -1,7 +1,7 @@
+Posicionamento da imagem das sprites => melhoria nas fronteiras.
 Animação ao pegar moeda?
 HUD;
 Três heróis.
-Implementar controle via joystick;
 Implementar terreno inclinado;
 Cenários com múltiplas camadas -> implementar um editor
 Implementar elementos do cenário;

@@ -129,7 +129,7 @@ public class BaseEnemy extends Entity {
                 yState = State.ON_GROUND;
             }
 
-            vel.y += GameWorld.GRAVITY;
+            vel.y += GameWorld.GRAVITY * delta;
 
             if ( vel.y > maxFallSpeed ) {
                 vel.y = maxFallSpeed;

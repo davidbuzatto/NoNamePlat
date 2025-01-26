@@ -141,7 +141,7 @@ public class Hero extends Entity {
         pos.x += vel.x * delta;
         pos.y += vel.y * delta;
         
-        if ( e.isKeyDown( EngineFrame.KEY_CONTROL ) ) {
+        if ( e.isKeyDown( EngineFrame.KEY_CONTROL ) || e.isGamepadButtonDown( EngineFrame.GAMEPAD_1, EngineFrame.GAMEPAD_BUTTON_RIGHT_FACE_LEFT ) ) {
             if ( accelerationStep < accelerationMaxStep ) {
                 nextAccelerationTickCounter += delta;
                 if ( nextAccelerationTickCounter > nextAccelerationTickTime ) {
@@ -169,7 +169,7 @@ public class Hero extends Entity {
         
         pushing = false;
         
-        if ( e.isKeyDown( EngineFrame.KEY_LEFT ) ) {
+        if ( e.isKeyDown( EngineFrame.KEY_LEFT ) || e.isGamepadButtonDown( EngineFrame.GAMEPAD_1, EngineFrame.GAMEPAD_BUTTON_LEFT_FACE_LEFT ) ) {
             
             if ( lookingState == State.LOOKING_RIGHT ) {
                 accelerationStep = 0;
@@ -179,7 +179,7 @@ public class Hero extends Entity {
             lookingState = State.LOOKING_LEFT;
             xState = State.MOVING;
             
-        } else if ( e.isKeyDown( EngineFrame.KEY_RIGHT ) ) {
+        } else if ( e.isKeyDown( EngineFrame.KEY_RIGHT ) || e.isGamepadButtonDown( EngineFrame.GAMEPAD_1, EngineFrame.GAMEPAD_BUTTON_LEFT_FACE_RIGHT ) ) {
             
             if ( lookingState == State.LOOKING_LEFT ) {
                 accelerationStep = 0;
@@ -198,7 +198,7 @@ public class Hero extends Entity {
         //resolveCollisionTiles( tiles );
         resolveCollisionQuadtree( quadtree );
         
-        if ( e.isKeyPressed( EngineFrame.KEY_SPACE ) && remainingJumps > 0 ) {
+        if ( ( e.isKeyPressed( EngineFrame.KEY_SPACE ) || e.isGamepadButtonPressed( EngineFrame.GAMEPAD_1, EngineFrame.GAMEPAD_BUTTON_RIGHT_FACE_DOWN ) ) && remainingJumps > 0 ) {
             jump();
         }
         
@@ -212,7 +212,7 @@ public class Hero extends Entity {
             yState = State.ON_GROUND;
         }
         
-        vel.y += GameWorld.GRAVITY;
+        vel.y += GameWorld.GRAVITY * delta;
         
         if ( vel.y > maxFallSpeed ) {
             vel.y = maxFallSpeed;
