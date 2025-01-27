@@ -32,7 +32,7 @@ public class GameWorld extends EngineFrame {
     
     public static final double GRAVITY = 1200;
     public static final double BASE_WIDTH = 64;
-    public static final boolean SHOW_BOUNDARIES = true;
+    public static final boolean SHOW_BOUNDARIES = false;
     public static final boolean SHOW_COLLISION_PROBES = false;
     
     // statistics
@@ -440,7 +440,7 @@ public class GameWorld extends EngineFrame {
         
         Vector2 v = camera.getWorldToScreen( startX, 0 );
         drawLine( v.x, v.y, v.x, getScreenHeight(), WHITE );
-        drawLine( v.x + 300, v.y, v.x + 300, getScreenHeight(), WHITE );
+        drawLine( v.x + Hero.WALK_SPEED, v.y, v.x + Hero.WALK_SPEED, getScreenHeight(), WHITE );
         
         if ( endCount ) {
             drawText( String.format( "time: %.2f(s)", timeCount ), 10, getScreenHeight() - 40, 20, WHITE );

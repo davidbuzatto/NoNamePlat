@@ -30,6 +30,11 @@ import java.util.List;
  */
 public class Hero extends Entity {
     
+    public static final double WALK_SPEED = 300;
+    public static final double MAX_ACCELERATION = 200;
+    public static final double JUMP_SPEED = -450;
+    public static final double MAX_FALL_SPEED = 600;
+    
     private static final double CP_WIDTH_SML = 10;
     private static final double CP_WIDTH_BIG = 20;
     
@@ -40,12 +45,8 @@ public class Hero extends Entity {
     private Vector2 posAdjust;
     private Vector2 vel;
     private Color color;
-
-    private double walkSpeed;
-    private double maxAcceleration;
-    private double jumpSpeed;
-    
-    private double maxFallSpeed;
+    private int hp;
+    private int lives;
     
     private int remainingJumps;
     private Vector2 doubleJumpPos;
@@ -105,10 +106,9 @@ public class Hero extends Entity {
         this.posAdjust = new Vector2( this.sliceDim.x - this.dim.x - 15, this.sliceDim.y - this.dim.y );
         this.vel = new Vector2();
         this.color = color;
-        this.walkSpeed = 300;
-        this.maxAcceleration = 200;
-        this.jumpSpeed = -450;
-        this.maxFallSpeed = 600;
+        
+        this.hp = 4;
+        this.lives = 3;
         
         this.aabb = new AABB( pos.x, pos.y, pos.x + dim.x, pos.y + dim.y, AABB.Type.DYNAMIC, this );
         
@@ -157,7 +157,7 @@ public class Hero extends Entity {
             running = false;
         }
         
-        double currentSpeed = walkSpeed + maxAcceleration * ( accelerationStep / accelerationMaxStep );
+        double currentSpeed = WALK_SPEED + MAX_ACCELERATION * ( accelerationStep / accelerationMaxStep );
         
         if ( accelerationStep > 5 ) {
             runAnimationRight.setTimeToNextFrame( 0.03 );
@@ -214,8 +214,8 @@ public class Hero extends Entity {
         
         vel.y += GameWorld.GRAVITY * delta;
         
-        if ( vel.y > maxFallSpeed ) {
-            vel.y = maxFallSpeed;
+        if ( vel.y > MAX_FALL_SPEED ) {
+            vel.y = MAX_FALL_SPEED;
         }
         
         idleAnimationRight.update( delta );
@@ -516,7 +516,7 @@ public class Hero extends Entity {
     }*/
     
     private void jump() {
-        vel.y = jumpSpeed;
+        vel.y = JUMP_SPEED;
         remainingJumps--;
         jumpAnimationRight.reset();
         jumpAnimationLeft.reset();

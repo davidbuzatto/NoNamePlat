@@ -1,5 +1,4 @@
 Posicionamento da imagem das sprites => melhoria nas fronteiras.
-Animação ao pegar moeda?
 HUD;
 Três heróis.
 Implementar terreno inclinado;
