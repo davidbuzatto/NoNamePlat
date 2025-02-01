@@ -51,6 +51,7 @@ public class GameWorld extends EngineFrame {
     private double halfScreenHeight;
     
     private Hero hero;
+    private Hud hud;
     private Camera2D camera;
     
     private List<BaseEnemy> enemies;
@@ -107,6 +108,14 @@ public class GameWorld extends EngineFrame {
             BLUE
         );
         
+        hud = new Hud( 
+                10, 10, 
+                hero, 
+                loadImage( "resources/images/hud/heart.png" ),
+                Utils.replaceHeroImageColors( loadImage( "resources/images/hud/portrait.png" ) ),
+                loadImage( "resources/images/hud/coin.png" )
+        );
+        
         camera = new Camera2D( 
             new Vector2(),
             new Vector2( halfScreenWidth, halfScreenHeight ),
@@ -128,7 +137,7 @@ public class GameWorld extends EngineFrame {
             G         IJJJJJJK   L   e    L              E
             G        Lcccccccc    IJJJJJJK               E
             G       Lccccccccc                           E
-            G   p   cccccccccc                           E
+            G   p  ecccccccccc                           E
             MBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBN
             FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
             """
@@ -168,6 +177,8 @@ public class GameWorld extends EngineFrame {
         updateEnemies( delta );
         updateCoins( delta );
         
+        hud.update( delta );
+        
         quadtree.update();
         updateCamera();
         
@@ -187,6 +198,8 @@ public class GameWorld extends EngineFrame {
         hero.draw( this );
         
         endMode2D();
+        
+        hud.draw( this );
         
         if ( showStatistics ) {
             drawStatistics( 20, 20 );

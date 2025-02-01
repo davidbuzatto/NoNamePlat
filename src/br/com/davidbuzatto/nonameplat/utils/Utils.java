@@ -21,11 +21,13 @@ public class Utils {
         new Color( 9, 56, 147 )
     };
     
-    public static void replaceHeroImageColors( Image image ) {
+    public static Image replaceHeroImageColors( Image image ) {
         
         for ( int i = 0; i < FROM_HERO_COLORS.length; i++ ) {
             image.colorReplace( FROM_HERO_COLORS[i], TO_HERO_COLORS[i] );
         }
+        
+        return image;
         
     }
     

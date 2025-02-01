@@ -1,6 +1,5 @@
 Posicionamento da imagem das sprites => melhoria nas fronteiras.
-HUD;
-Três heróis.
 Implementar terreno inclinado;
 Cenários com múltiplas camadas -> implementar um editor
 Implementar elementos do cenário;
+Três heróis.

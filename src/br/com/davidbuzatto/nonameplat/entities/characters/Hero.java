@@ -45,8 +45,11 @@ public class Hero extends Entity {
     private Vector2 posAdjust;
     private Vector2 vel;
     private Color color;
+    
     private int hp;
+    private int maxHp;
     private int lives;
+    private int coins;
     
     private int remainingJumps;
     private Vector2 doubleJumpPos;
@@ -107,8 +110,10 @@ public class Hero extends Entity {
         this.vel = new Vector2();
         this.color = color;
         
-        this.hp = 4;
+        this.hp = 5;
+        this.maxHp = 5;
         this.lives = 3;
+        this.coins = 0;
         
         this.aabb = new AABB( pos.x, pos.y, pos.x + dim.x, pos.y + dim.y, AABB.Type.DYNAMIC, this );
         
@@ -414,6 +419,7 @@ public class Hero extends Entity {
         if ( coin.isActive() ) {
             if ( CollisionUtils.checkCollisionAABBs( aabb, coin.getAABB() ) ) {
                 coin.collect();
+                coins++;
             }
         }
         
@@ -437,11 +443,15 @@ public class Hero extends Entity {
                     pos.x = enemy.getPos().x + enemy.getDim().x;
                     pushing = true;
                     accelerationStep = 0;
+                    hp--;
+                    enemy.prepareToDie();
                     break;
                 case RIGHT:
                     pos.x = enemy.getPos().x - dim.x;
                     pushing = true;
                     accelerationStep = 0;
+                    hp--;
+                    enemy.prepareToDie();
                     break;
                 case UP:
                     vel.y = 0;
@@ -651,6 +661,38 @@ public class Hero extends Entity {
 
     public AABB getAABB() {
         return aabb;
+    }
+
+    public int getHp() {
+        return hp;
+    }
+
+    public void setHp( int hp ) {
+        this.hp = hp;
+    }
+
+    public int getLives() {
+        return lives;
+    }
+
+    public void setLives( int lives ) {
+        this.lives = lives;
+    }
+
+    public int getCoins() {
+        return coins;
+    }
+
+    public void setCoins( int coins ) {
+        this.coins = coins;
+    }
+
+    public int getMaxHp() {
+        return maxHp;
+    }
+
+    public void setMaxHp( int maxHp ) {
+        this.maxHp = maxHp;
     }
     
 }
